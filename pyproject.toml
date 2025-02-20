@@ -74,6 +74,7 @@ command_line = "-m pytest --junit-xml=reports/junit.xml"
 data_file = "reports/.coverage"
 
 [tool.poetry.dev-dependencies]
+python = "=3.10"
 mypy = ">=1.10.0"
 pre-commit = ">=2.20.0"
 coverage = ">=6.4.3"
@@ -84,6 +85,12 @@ sphinx = "*"
 sphinx-rtd-theme = "*"
 sphinxcontrib-napoleon ="*"
 tomli = "*"
+urllib3 = "*"
+requests-oauthlib = "*"
+authlib           = "*"
+#openssl           = "*"
+pip-system-certs  = "*"
+cryptography      = "*"
 
 [tool.poetry.scripts]
 app = "exphub.app:main"
