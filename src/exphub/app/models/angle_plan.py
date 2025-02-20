@@ -75,6 +75,8 @@ class AnglePlanModel(BaseModel):
                 new_angle["BL12:Mot:goniokm:phi"] = angle["BL12:Mot:goniokm:phi"]
                 new_angle["BL12:Mot:goniokm:omega"] = angle["BL12:Mot:goniokm:omega"]
                 new_angle["Wait For"] = angle["Wait For/n"]
+                if "PCharge" in new_angle["Wait For"]:
+                    new_angle["Wait For"] = "PCharge"
                 new_angle["Value"] = angle["Value"]
                 new_angle["Or Time"] = ""
                 new_angle_list.append(new_angle)
