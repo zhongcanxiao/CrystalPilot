@@ -1,0 +1,11 @@
+# Please do not edit or delete this file. It is needed to be able to update project from template.
+_commit: '0.13'
+_src_path: https://code.ornl.gov/ndip/project-templates/nova-application-template.git
+framework: Trame
+gui: true
+multitabs: true
+project_name: ExpHub
+publish_docs: false
+publish_to_pypi: false
+python_package: exphub
+use_mantid: true
