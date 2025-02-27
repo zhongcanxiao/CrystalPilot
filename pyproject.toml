@@ -91,6 +91,11 @@ authlib           = "*"
 #openssl           = "*"
 pip-system-certs  = "*"
 cryptography      = "*"
+plotly      = "*"
+selenium ="*"
+matplotlib ="*"
+trame-plotly ="*"
+
 
 [tool.poetry.scripts]
 app = "exphub.app:main"

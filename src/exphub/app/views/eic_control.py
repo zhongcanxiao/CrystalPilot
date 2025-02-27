@@ -6,6 +6,8 @@ from nova.trame.view.layouts import GridLayout, HBoxLayout
 from ..view_models.main import MainViewModel
 
 
+
+# In your View setup
 class EICControlView:
     """Sample tab 2 view class. Renders text input for user password."""
 
