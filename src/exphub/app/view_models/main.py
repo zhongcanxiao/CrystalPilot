@@ -6,6 +6,10 @@ from nova.mvvm.interface import BindingInterface
 
 from ..models.main_model import MainModel
 from ..models.angle_plan import AnglePlanModel
+from ..models.experiment_info import ExperimentInfoModel
+from ..models.eic_control import EICControlModel
+#from ..models.ccs_status import CCSStatusModel
+#from ..models.temporal_analysis import TemporalAnalysisModel    
 
 
 
@@ -22,8 +26,11 @@ class MainViewModel:
         # but one also can provide a callback function if they want to react to those events
         # and/or process errors.
         self.model_bind = binding.new_bind(self.model, callback_after_update=self.change_callback)
+        self.experimentinfo_bind = binding.new_bind(self.model.experimentinfo, callback_after_update=self.change_callback)
         self.angleplan_bind = binding.new_bind(self.model.angleplan, callback_after_update=self.change_callback)
         self.eiccontrol_bind = binding.new_bind(self.model.eiccontrol, callback_after_update=self.change_callback)
+
+
 
     def change_callback(self, results: Dict[str, Any]) -> None:
         if results["error"]:

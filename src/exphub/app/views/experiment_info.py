@@ -11,10 +11,17 @@ class ExperimentInfoView:
 
     def __init__(self, view_model):
         self.view_model = view_model
+
+        self.view_model.experimentinfo_bind.connect("config")
         self.create_ui()
 
     def create_ui(self) -> None:
 
+
+        with GridLayout():
+            
+            InputField(v_model="config.expName")
+            InputField(v_model="config.ipts_number")
 
         with GridLayout():
             InputField(
@@ -22,11 +29,7 @@ class ExperimentInfoView:
                 items="config.options.instrument_list",
                 type="select",
             )
-            InputField(v_model="config.expName")
             InputField(v_model="config.molecularFormula")
-            InputField(v_model="config.Z", type="number")
-            InputField(v_model="config.unitCellVolume", type="number")
-            InputField(v_model="config.sampleRadius", type="number")
             InputField(
                 v_model="config.crystalsystem",
                 items="config.options.crystalsystem_list",

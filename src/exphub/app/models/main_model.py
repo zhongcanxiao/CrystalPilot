@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 from .angle_plan import AnglePlanModel
 from .eic_control import EICControlModel
+from .experiment_info import ExperimentInfoModel
 
 class MainModel(BaseModel):
     """
@@ -24,3 +25,4 @@ class MainModel(BaseModel):
     password: str = Field(default="test_password", title="User Password")
     angleplan: AnglePlanModel = Field(default_factory=AnglePlanModel, title="Angle Plan")
     eiccontrol: EICControlModel = Field(default_factory=EICControlModel, title="EIC Control")
+    experimentinfo: ExperimentInfoModel = Field(default_factory=ExperimentInfoModel, title="Experiment Info")
