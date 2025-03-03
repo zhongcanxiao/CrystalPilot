@@ -1,5 +1,5 @@
 
-This is the documentation for ExpHub project.
+This is the documentation for CrystalPilot project.
 
 .. toctree::
    :maxdepth: 2

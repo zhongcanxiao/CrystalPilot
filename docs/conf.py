@@ -13,7 +13,7 @@ import tomli
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "ExpHub"
+project = "CrystalPilot"
 copyright = "2024, ORNL"
 with open("../pyproject.toml", "rb") as toml_file:
     toml_dict = tomli.load(toml_file)

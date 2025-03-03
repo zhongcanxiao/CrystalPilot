@@ -1,7 +1,7 @@
 # Development Guide
 
 This document provides guidelines and instructions for setting up and contributing to
-the ExpHub project.
+the CrystalPilot project.
 
 ## Starting from the template
 

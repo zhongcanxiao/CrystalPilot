@@ -47,7 +47,7 @@ class EICControlModel(BaseModel):
         eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=self.IPTS_number)
         eic_client.is_eic_enabled(print_results=True)
 
-        desc="ExpHub Submission"
+        desc="CrystalPilot Submission"
         if self.beamline == "bl12":
             headers=['Title','Comment','BL12:Mot:goniokm:phi','BL12:Mot:goniokm:omega','Wait For','Value','Or Time']
         rows=[[angle[key] for key in headers] for angle in angleplan]

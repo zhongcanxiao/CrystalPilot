@@ -1,6 +1,6 @@
-# Contributing to ExpHub
+# Contributing to CrystalPilot
 
-Thank you for considering contributing to ExpHub!
+Thank you for considering contributing to CrystalPilot!
 This document provides guidelines to help you contribute effectively and ensure a smooth process for everyone involved.
 
 ## Getting Started
