@@ -24,6 +24,7 @@ class TemporalAnalysisView:
     def __init__(self,view_model:MainViewModel) -> None:
         self.view_model = view_model
         self.view_model.temporalanalysis_bind.connect("model_temporalanalysis")
+        self.view_model.temporalanalysis_updatefig_bind.connect(self.update_figures)
         self.create_ui()
 
     def create_ui(self) -> None:
@@ -46,37 +47,38 @@ class TemporalAnalysisView:
         with GridLayout(columns=2, classes="mb-2"):
             with HBoxLayout(halign="center", height="50vh"):
                 vuetify.VCardTitle("Prediction of Intensity"),
-                self.figure = plotly.Figure()
+                self.figure_intensity = plotly.Figure()
             with HBoxLayout(halign="center", height="50vh"):
                 vuetify.VCardTitle("Prediction of Uncertainty"),
-                self.figure = plotly.Figure()
+                self.figure_uncertainty = plotly.Figure()
             
         vuetify.VBtn("Auto Update", click=self.view_model.create_auto_update_cssstatus_figure)
 
 
-    def update_figure(self, figure: go.Figure) -> None:
-        er=self.figure.update(figure)
-        print("Currently plotted data:", self.figure.data)
-        print("Currently plotted data:", self.figure.layout)
-        print(er, "update_figure")
-        self.figure.state.flush()  # 
-        #print("figure info:", figure)
-        #print("figure data:", figure.data)
-        #print("figure layout:", figure.layout)
-        print("figure layout title:", figure.layout.title)
-        #print("figure layout image:", figure.layout.images)
-        print("number of images:", len(figure.layout.images))
-        for image in figure.layout.images:
-            md5sum = hashlib.md5(image.source.encode('utf-8')).hexdigest()
-            print("image source md5sum:", md5sum)
+    def update_figures(self, figure_intensity: go.Figure,figure_uncertainty:go.Figure) -> None:
+        self.figure_intensity.update(figure_intensity)
+        self.figure_uncertainty.update(figure_uncertainty)
+        #print("Currently plotted data:", self.figure.data)
+        #print("Currently plotted data:", self.figure.layout)
+        #print(er, "update_figure")
+        #self.figure.state.flush()  # 
+        ##print("figure info:", figure)
+        ##print("figure data:", figure.data)
+        ##print("figure layout:", figure.layout)
+        #print("figure layout title:", figure.layout.title)
+        ##print("figure layout image:", figure.layout.images)
+        #print("number of images:", len(figure.layout.images))
+        #for image in figure.layout.images:
+        #    md5sum = hashlib.md5(image.source.encode('utf-8')).hexdigest()
+        #    print("image source md5sum:", md5sum)
  
 
-            #vuetify.VCard(
-            #    vuetify.VCardTitle("Temporal Analysis"),
-            #    vuetify.VCardText("Content for Temporal Analysis tab goes here."),
-            #    #go.Figure(id="temporal_plot"),
-            #    go.Scatter(x=x_data, y=y_data, mode='lines+markers')
-            #)
+        #    #vuetify.VCard(
+        #    #    vuetify.VCardTitle("Temporal Analysis"),
+        #    #    vuetify.VCardText("Content for Temporal Analysis tab goes here."),
+        #    #    #go.Figure(id="temporal_plot"),
+        #    #    go.Scatter(x=x_data, y=y_data, mode='lines+markers')
+        #    #)
 
     #def update_plot(self):
     #    x_data, y_data = temporal_data_analysis()

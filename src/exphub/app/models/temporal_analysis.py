@@ -17,41 +17,46 @@ import sys
 #sys.path.append('/SNS/TOPAZ/shared/PythonPrograms/Python3Library')
 #from SCDTools import recenter_peaks_workspace
 
+def set_up_mantid(self)->None:
+
+    ipts=34069
+    output_path = '/SNS/TOPAZ/IPTS-{:d}/shared/autoreduce/live_data/'.format(ipts)
+    calib_fname = '/SNS/TOPAZ/IPTS-{:d}/shared/calibration/TOPAZ_2025A_AG_3-3BN.DetCal'.format(ipts)
+
+    # Sample information
+    min_d = 7   # shortest lattice parameter
+    max_d = 22  # longest lattice parameter
+
+    cell_type  = 'Monoclinic'
+    centering  = 'P'
+
+    tolerance = 0.12
+
+    #Specify ellipse integration control parameters for satellite peaks
+    satellite_peak_size             = '0.07'
+    satellite_background_inner_size = '0.09'
+    satellite_background_outer_size = '0.12'
+    satellite_region_radius         = '0.13'
+
+    #
+    mod_vector1 = '0,0,0'
+    mod_vector2 = '0,0,0'
+    mod_vector3 = '0,0,0'
+    #
+    max_order = '1'
+    cross_terms = False
+
+    tolerance_satellite = 0.10
+    #
+    #User specified q-vector if save_mod_info is True
+    save_mod_info = False
+    #
+    min_monitor_tof = 500
+    max_monitor_tof = 13000
+    use_monitor_counts = False
 
 
-ipts=34069
-output_path = '/SNS/TOPAZ/IPTS-{:d}/shared/autoreduce/live_data/'.format(ipts)
-calib_fname = '/SNS/TOPAZ/IPTS-{:d}/shared/calibration/TOPAZ_2025A_AG_3-3BN.DetCal'.format(ipts)
-
-# Sample information
-min_d = 7   # shortest lattice parameter
-max_d = 22  # longest lattice parameter
-
-cell_type  = 'Monoclinic'
-centering  = 'P'
-
-tolerance = 0.12
-
-#Specify ellipse integration control parameters for satellite peaks
-satellite_peak_size             = '0.07'
-satellite_background_inner_size = '0.09'
-satellite_background_outer_size = '0.12'
-satellite_region_radius         = '0.13'
-
-#
-mod_vector1 = '0,0,0'
-mod_vector2 = '0,0,0'
-mod_vector3 = '0,0,0'
-#
-max_order = '1'
-cross_terms = False
-
-tolerance_satellite = 0.10
-#
-#User specified q-vector if save_mod_info is True
-save_mod_info = False
-
-#=================================================================================================
+    #=================================================================================================
 
 def update_plot():
     """Update plot with current run data dynamically."""
@@ -82,56 +87,56 @@ def plot_data(x, y1, y2, xlabel, ylabel1, ylabel2):
     #plt.draw()  # Use draw() instead of show() to update the plot
     plt.show()  # Use draw() instead of show() to update the plot
 
-#
-min_monitor_tof = 500
-max_monitor_tof = 13000
+def init_measurement_data():
+    """Initialize the plot with empty data."""
 
-proton_charges = []
-intensity_ratios = []
-rsigs = []
-measure_times = []
-sum = sig2 = sig3 = sig5 = sig10 = 0
-# Initialize arrays as empty lists
-sig2s = np.array([])
-sig3s = np.array([])
-sig5s = np.array([])
-sig10s = np.array([])
+    proton_charges = []
+    intensity_ratios = []
+    rsigs = []
+    measure_times = []
+    sum = sig2 = sig3 = sig5 = sig10 = 0
+    # Initialize arrays as empty lists
+    sig2s = np.array([])
+    sig3s = np.array([])
+    sig5s = np.array([])
+    sig10s = np.array([])
 
-use_monitor_counts = False
 
 # Check if live data is already running
 
-try:
-    mtdapi.StartLiveData(
-            Instrument='TOPAZ',
-            Listener='SNSLiveEventDataListener',
-            UpdateEvery=10,
-            AccumulationMethod='Add',
-            PreserveEvents=True,
-            OutputWorkspace='live_event_ws')    
-    run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
-    time.sleep(1)
-    #time.sleep(60)
-except RuntimeError as e:
-    if 'Another MonitorLiveData thread is running' in str(e):
-        current_run=mtd['live_event_ws'].getRunNumber()
-        print("Warning: Another MonitorLiveData thread is already running for TOPAZ run %s."%(str(current_run)),
-              "\nIt will continue with the current run unless you stop the existing instance manually or use a different OutputWorkspace.")
-        sys.exit(1)
-    else:
-        print(f"Unexpected error occurred: {str(e)}")
-        raise
+def start_live_data_collection():
+    """Start live data reduction."""
+    try:
+        mtdapi.StartLiveData(
+                Instrument='TOPAZ',
+                Listener='SNSLiveEventDataListener',
+                UpdateEvery=10,
+                AccumulationMethod='Add',
+                PreserveEvents=True,
+                OutputWorkspace='live_event_ws')    
+        run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+        time.sleep(1)
+        #time.sleep(60)
+    except RuntimeError as e:
+        if 'Another MonitorLiveData thread is running' in str(e):
+            current_run=mtd['live_event_ws'].getRunNumber()
+            print("Warning: Another MonitorLiveData thread is already running for TOPAZ run %s."%(str(current_run)),
+                  "\nIt will continue with the current run unless you stop the existing instance manually or use a different OutputWorkspace.")
+            sys.exit(1)
+        else:
+            print(f"Unexpected error occurred: {str(e)}")
+            raise
+        
+    # Proceed with data processing
+    if not mtdapi.mtd.doesExist('live_event_ws'):
+        print("Live data workspace does not exist. Exiting.")
+        exit(1)
     
-# Proceed with data processing
-if not mtdapi.mtd.doesExist('live_event_ws'):
-    print("Live data workspace does not exist. Exiting.")
-    exit(1)
-
-current_run = mtdapi.mtd['live_event_ws'].getRunNumber()
-print(f"Current run: {current_run}")
-
-# update the run number for live data reduction
-run = current_run
+    current_run = mtdapi.mtd['live_event_ws'].getRunNumber()
+    print(f"Current run: {current_run}")
+    
+    # update the run number for live data reduction
+    run = current_run
 
 # Initialize the plot with two subplots
 fig, (ax_intensity, ax_rsig) = plt.subplots(2, 1, sharex=True)
@@ -202,6 +207,7 @@ def live_data_reduction():
             print("Please check if neutron beam is on, or if the crystal is diffracting.")
             exit()
         #continue
+        
         
 
     mtdapi.IndexPeaks(PeaksWorkspace='live_peaks_ws', Tolerance=0.12, ToleranceForSatellite=0.10000000000000001, RoundHKLs=False, CommonUBForAll=True)
