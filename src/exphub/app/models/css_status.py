@@ -87,7 +87,7 @@ class CSSStatusModel(BaseModel):
         image = Image.open(io.BytesIO(screenshot))
         width, height = image.size
         timestamp = time.time()
-        #self.timestamp = timestamp
+        self.timestamp = timestamp
         print("genratged fig md5sum:" + str(hash(image.tobytes())))
         match self.plot_type:
             case "Detector":

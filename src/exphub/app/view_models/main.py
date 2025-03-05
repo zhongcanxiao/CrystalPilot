@@ -106,9 +106,8 @@ class MainViewModel:
 
     async def auto_update_cssstatus_figure(self) -> None:
         while True:
-            self.model.cssstatus.timestamp = time.time()
             time.sleep(14)
-            #self.update_cssstatus_figure()
+            self.update_cssstatus_figure()
 
     def create_auto_update_cssstatus_figure(self) -> None:
         create_task(self.auto_update_cssstatus_figure())        
@@ -116,7 +115,7 @@ class MainViewModel:
     def update_cssstatus_figure(self, _: Any = None) -> None:
         self.cssstatus_bind.update_in_view(self.model.cssstatus)
         self.cssstatus_updatefig_bind.update_in_view(self.model.cssstatus.get_figure())
-        #time.sleep(7)
+        time.sleep(7)
 
 
 
