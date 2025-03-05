@@ -19,11 +19,8 @@ class TemporalAnalysisView:
 
     def __init__(self,view_model:MainViewModel) -> None:
         self.view_model = view_model
-        self.view_model.eiccontrol_bind.connect("model_eiccontrol")
-    def __init__(self, view_model):
-        self.view_model = view_model
+        self.view_model.temporalanalysis_bind.connect("model_temporalanalysis")
         self.create_ui()
-    #    self.update_plot()
 
     def create_ui(self) -> None:
         x_data, y_data = temporal_data_analysis()

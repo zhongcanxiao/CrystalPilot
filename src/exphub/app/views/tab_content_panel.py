@@ -7,8 +7,9 @@ from ..view_models.main import MainViewModel
 from .temporal_analysis import TemporalAnalysisView  # Import the new view
 from .angle_plan import AnglePlanView
 from .eic_control import EICControlView
-from .ccs_status import CCSStatusView
+from .css_status import CSSStatusView
 from .experiment_info import ExperimentInfoView
+from .newtabtemplate import NewTabTemplateView
 
 
 class TabContentPanel:
@@ -34,7 +35,9 @@ class TabContentPanel:
                         with vuetify.VWindowItem(value=4):
                             EICControlView(self.view_model)
                         with vuetify.VWindowItem(value=5):
-                            CCSStatusView(self.view_model)
+                            CSSStatusView(self.view_model)
+                        with vuetify.VWindowItem(value=6):
+                            NewTabTemplateView(self.view_model)
             with vuetify.VCardActions():
                 vuetify.VBtn("Data Visualization", click=self.open_data_visualization)
                 vuetify.VBtn("Data Reduction", click=self.open_data_reduction)

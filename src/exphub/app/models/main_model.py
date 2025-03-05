@@ -4,6 +4,11 @@ from pydantic import BaseModel, Field
 from .angle_plan import AnglePlanModel
 from .eic_control import EICControlModel
 from .experiment_info import ExperimentInfoModel
+from .css_status import CSSStatusModel
+from .temporal_analysis import TemporalAnalysisModel
+
+from .newtabtemplate import NewTabTemplateModel 
+
 
 class MainModel(BaseModel):
     """
@@ -26,3 +31,8 @@ class MainModel(BaseModel):
     angleplan: AnglePlanModel = Field(default_factory=AnglePlanModel, title="Angle Plan")
     eiccontrol: EICControlModel = Field(default_factory=EICControlModel, title="EIC Control")
     experimentinfo: ExperimentInfoModel = Field(default_factory=ExperimentInfoModel, title="Experiment Info")
+    cssstatus: CSSStatusModel = Field(default_factory=CSSStatusModel, title="CSS Status")
+    temporalanalysis: TemporalAnalysisModel = Field(default_factory=TemporalAnalysisModel, title="Temporal Analysis")
+
+    newtabtemplate: NewTabTemplateModel = Field(default_factory=NewTabTemplateModel, title="New Tab Template")
+    #plotly: PlotlyModel = Field(default_factory=PlotlyModel, title="Plotly")

@@ -8,7 +8,14 @@ from ..models.main_model import MainModel
 from ..models.angle_plan import AnglePlanModel
 from ..models.experiment_info import ExperimentInfoModel
 from ..models.eic_control import EICControlModel
-#from ..models.ccs_status import CCSStatusModel
+from ..models.newtabtemplate import NewTabTemplateModel
+
+#from ..models.plotly import PlotlyConfig
+#from pyvista import Plotter  # just for typing
+#from ..models.pyvista import PyVistaConfig
+
+
+#from ..models.css_status import CSSStatusModel
 #from ..models.temporal_analysis import TemporalAnalysisModel    
 
 
@@ -26,9 +33,32 @@ class MainViewModel:
         # but one also can provide a callback function if they want to react to those events
         # and/or process errors.
         self.model_bind = binding.new_bind(self.model, callback_after_update=self.change_callback)
+
         self.experimentinfo_bind = binding.new_bind(self.model.experimentinfo, callback_after_update=self.change_callback)
         self.angleplan_bind = binding.new_bind(self.model.angleplan, callback_after_update=self.change_callback)
         self.eiccontrol_bind = binding.new_bind(self.model.eiccontrol, callback_after_update=self.change_callback)
+        self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.change_callback)
+        self.temporalanalysis_bind = binding.new_bind(self.model.temporalanalysis, callback_after_update=self.change_callback)
+
+######################################################################################################################################################
+# wrong
+#        self.newtabtemplate_bind = binding.new_bind(self.model.newtabtemplate, callback_after_update=self.change_callback)
+#        self.newtabtemplate_updatefig_bind = binding.new_bind(self.model.newtabtemplate, callback_after_update=self.update_newtabtemplate_figure)
+######################################################################################################################################################
+        self.newtabtemplate_bind = binding.new_bind(self.model.newtabtemplate,
+                                                callback_after_update=self.update_newtabtemplate_figure)
+        self.newtabtemplate_updatefig_bind = binding.new_bind()
+######################################################################################################################################################
+
+        #self.pyvista_config = PyVistaConfig()
+
+        #self.plotly_config_bind = binding.new_bind(
+        #    linked_object=self.plotly_config, callback_after_update=self.update_plotly_figure
+        #)
+        #self.plotly_figure_bind = binding.new_bind(linked_object=self.plotly_config)
+        #self.pyvista_config_bind = binding.new_bind(linked_object=self.pyvista_config)
+
+
 
 
 
@@ -43,7 +73,10 @@ class MainViewModel:
         self.model.angleplan.load_ap(self.model.angleplan.plan_file)
         self.angleplan_bind.update_in_view(self.model.angleplan)
         self.eiccontrol_bind.update_in_view(self.model.eiccontrol)
-        print(self.model.angleplan.test_list)
+######################################################################################################################################################
+        self.newtabtemplate_bind.update_in_view(self.model.newtabtemplate)
+######################################################################################################################################################
+        #print(self.model.angleplan.test_list)
 
     def submit_angle_plan(self) -> None:
         #print("submit_angle_plan")
@@ -53,3 +86,18 @@ class MainViewModel:
     def call_load_token(self) -> None:
         self.model.eiccontrol.load_token(self.model.eiccontrol.token_file)
         self.update_view()
+#
+#
+#    def update_pyvista_volume(self, plotter: Plotter) -> None:
+#        self.pyvista_config.render(plotter)
+#
+#    def update_plotly_figure(self, _: Any = None) -> None:
+#        self.plotly_config_bind.update_in_view(self.plotly_config)
+#        self.plotly_figure_bind.update_in_view(self.plotly_config.get_figure())
+#
+
+
+
+    def update_newtabtemplate_figure(self, _: Any = None) -> None:
+        self.newtabtemplate_bind.update_in_view(self.model.newtabtemplate)
+        self.newtabtemplate_updatefig_bind.update_in_view(self.model.newtabtemplate.get_figure())

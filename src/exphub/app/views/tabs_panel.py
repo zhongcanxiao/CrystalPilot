@@ -15,8 +15,10 @@ class TabsPanel:
 
     def create_ui(self) -> None:
         with vuetify.VTabs(v_model=("active_tab", 0), classes="pl-5"):
-            vuetify.VTab("IPTS Info",           value=1)  # New tab for CCS Status
-            vuetify.VTab("Live Data",           value=2)  # New tab for CCS Status
+            vuetify.VTab("IPTS Info",           value=1)  
+            vuetify.VTab("Live Data",           value=2)  
             vuetify.VTab("Experiment Plan",     value=3)
             vuetify.VTab("EIC Control",         value=4)
-            vuetify.VTab("Instrument Status",   value=5)  # New tab for CCS Status
+            vuetify.VTab("Instrument Status",   value=5) 
+            
+            vuetify.VTab("New Tab Template",    value=6) 
