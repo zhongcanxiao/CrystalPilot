@@ -17,6 +17,7 @@ import sys
 #sys.path.append('/SNS/TOPAZ/shared/PythonPrograms/Python3Library')
 #from SCDTools import recenter_peaks_workspace
 
+'''
 def set_up_mantid(self)->None:
 
     ipts=34069
@@ -139,16 +140,17 @@ def start_live_data_collection():
     run = current_run
 
 # Initialize the plot with two subplots
-fig, (ax_intensity, ax_rsig) = plt.subplots(2, 1, sharex=True)
-ax_intensity.grid(True)
-ax_rsig.grid(True)
+def init_visualization():
+    fig, (ax_intensity, ax_rsig) = plt.subplots(2, 1, sharex=True)
+    ax_intensity.grid(True)
+    ax_rsig.grid(True)
 
 
 
-missing_ub_number=0
-run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
-#while True:
+    missing_ub_number=0
+    run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
 def live_data_reduction():
+#while True:
     run=mtdapi.mtd['live_event_ws'].getRunNumber()
     start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
 
@@ -357,7 +359,7 @@ def live_data_reduction():
     # Pause briefly to let the plots be updated
     time.sleep(15)
 
-
+'''
 
 
 
@@ -367,8 +369,26 @@ class TemporalAnalysisModel(BaseModel):
     table_test: List[Dict] = Field(default=[{"title":"1","header":"h"}])
     prediction_model_type: str = Field(default="Linear Interpolation", title="Prediction Model")
     prediction_model_type_options: List[str] = ["Linear Interpolation", "Poisson Model"]
+    time_steps: List[float] = Field(default=[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], title="Time Steps")
+    intensity_data: List[float] = Field(default=[0.0, 1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0], title="Intensity Data")
+    variance_data: List[float] = Field(default=[0.0, 0.1, 0.4, 0.9, 1.6, 2.5, 3.6, 4.9, 6.4, 8.1], title="Variance Data")
+    uncertainty_data: List[float] = Field(default=[0.0, 0.2, 0.6, 1.2, 2.0, 3.0, 4.2, 5.6, 7.2, 9.0], title="Uncertainty Data")
+    #prediction_figure: go.Figure = Field(default_factory=go.Figure, title="Prediction Figure")
+    timestamp: float=Field(default=0.0,title="timestamp")
 
-    def get_live_data(self) -> List[Dict]:
+    def get_figure_intensity(self) -> go.Figure:
+        self.timestamp = time.time()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=self.time_steps, y=self.intensity_data, mode='lines+markers', name='Intensity Data'))
+        fig.update_layout(title='Prediction of Intensity'+str(self.timestamp), xaxis_title='Time Steps', yaxis_title='Intensity')
+        return fig
+    def get_figure_uncertainty(self) -> go.Figure:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=self.time_steps, y=self.uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
+        fig.update_layout(title='Prediction of Uncertainty'+str(self.timestamp), xaxis_title='Time Steps', yaxis_title='Uncertainty')
+        return fig
+
+    def get_live_data(self) -> None:
         pass
         
     def generate_prediction_figure(self) -> go.Figure:

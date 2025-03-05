@@ -52,7 +52,7 @@ class TemporalAnalysisView:
                 vuetify.VCardTitle("Prediction of Uncertainty"),
                 self.figure_uncertainty = plotly.Figure()
             
-        vuetify.VBtn("Auto Update", click=self.view_model.create_auto_update_cssstatus_figure)
+        vuetify.VBtn("Auto Update", click=self.view_model.create_auto_update_temporalanalysis_figure)
 
 
     def update_figures(self, figure_intensity: go.Figure,figure_uncertainty:go.Figure) -> None:

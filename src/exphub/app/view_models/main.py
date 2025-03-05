@@ -119,6 +119,9 @@ class MainViewModel:
         self.cssstatus_updatefig_bind.update_in_view(self.model.cssstatus.get_figure())
         time.sleep(7)
 
+    def create_auto_update_temporalanalysis_figure(self) -> None:
+        pass
+
     def update_temporalanalysis_figure(self, _: Any = None) -> None:
         self.temporalanalysis_bind.update_in_view(self.model.temporalanalysis)
         self.temporalanalysis_updatefig_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity(),self.model.temporalanalysis.get_figure_uncertainty())
