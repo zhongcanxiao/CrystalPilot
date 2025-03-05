@@ -203,7 +203,6 @@ def live_data_reduction():
             exit()
         #continue
         
-        
 
     mtdapi.IndexPeaks(PeaksWorkspace='live_peaks_ws', Tolerance=0.12, ToleranceForSatellite=0.10000000000000001, RoundHKLs=False, CommonUBForAll=True)
     mtdapi.IntegrateEllipsoids(InputWorkspace='live_event_ws', PeaksWorkspace='live_peaks_ws', 

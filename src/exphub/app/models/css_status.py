@@ -84,10 +84,10 @@ class CSSStatusModel(BaseModel):
                 return True
     def get_figure(self) -> go.Figure:
         screenshot = save_webpage_as_image(bl12cssstatus_urlsrc)
-        timestamp = time.time()
-        self.timestamp = timestamp
         image = Image.open(io.BytesIO(screenshot))
         width, height = image.size
+        timestamp = time.time()
+        #self.timestamp = timestamp
         print("genratged fig md5sum:" + str(hash(image.tobytes())))
         match self.plot_type:
             case "Detector":
