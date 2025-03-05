@@ -45,7 +45,8 @@ class MainViewModel:
         #self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.change_callback)
         self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.update_cssstatus_figure)
         self.cssstatus_updatefig_bind = binding.new_bind()
-        self.temporalanalysis_updatefig_bind = binding.new_bind()
+        self.temporalanalysis_updatefigure_uncertainty_bind = binding.new_bind()
+        self.temporalanalysis_updatefigure_intensity_bind = binding.new_bind()
 ######################################################################################################################################################
 # wrong
 #        self.newtabtemplate_bind = binding.new_bind(self.model.newtabtemplate, callback_after_update=self.change_callback)
@@ -124,7 +125,9 @@ class MainViewModel:
 
     def update_temporalanalysis_figure(self, _: Any = None) -> None:
         self.temporalanalysis_bind.update_in_view(self.model.temporalanalysis)
-        self.temporalanalysis_updatefig_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity(),self.model.temporalanalysis.get_figure_uncertainty())
+        #self.temporalanalysis_updatefig_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity(),self.model.temporalanalysis.get_figure_uncertainty())
+        self.temporalanalysis_updatefigure_intensity_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity())
+        self.temporalanalysis_updatefigure_uncertainty_bind.update_in_view(self.model.temporalanalysis.get_figure_uncertainty())
         time.sleep(7)
 
 
