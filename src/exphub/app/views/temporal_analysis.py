@@ -7,6 +7,10 @@ from nova.trame.view.layouts import GridLayout, HBoxLayout
 from ..view_models.main import MainViewModel
 
 import plotly.graph_objects as go
+from PIL import Image
+from trame.widgets import html
+from trame.widgets import plotly
+import hashlib
 
 def temporal_data_analysis():
     # Dummy data generation for the plot
@@ -24,9 +28,49 @@ class TemporalAnalysisView:
 
     def create_ui(self) -> None:
         x_data, y_data = temporal_data_analysis()
-        with vuetify.VContainer(fluid=True, classes="pa-5"):
-                vuetify.VCardTitle("Temporal Analysis"),
-                vuetify.VCardText("Content for Temporal Analysis tab goes here."),
+        #with vuetify.VContainer(fluid=True, classes="pa-5"):
+        #        vuetify.VCardTitle("Temporal Analysis"),
+        #        vuetify.VCardText("Content for Temporal Analysis tab goes here."),
+        with GridLayout(columns=1, classes="mb-2"):
+            InputField(v_model="model_temporalanalysis.prediction_model_type", items="model_temporalanalysis.prediction_model_type_options", type="select")
+        #with GridLayout(columns=4, classes="mb-2"):
+            #InputField(v_model="model_cssstatus.plot_type", items="model_cssstatus.plot_type_options", type="select")
+            #InputField(v_model="model_cssstatus.x_axis", items="model_cssstatus.axis_options", type="select")
+            #InputField(v_model="model_cssstatus.y_axis", items="model_cssstatus.axis_options", type="select")
+            #InputField(
+            #    v_model="model_cssstatus.z_axis",
+            #    disabled=("model_cssstatus.is_not_heatmap",),
+            #    items="model_cssstatus.axis_options",
+            #    type="select",
+            #)
+        with GridLayout(columns=2, classes="mb-2"):
+            with HBoxLayout(halign="center", height="50vh"):
+                vuetify.VCardTitle("Prediction of Intensity"),
+                self.figure = plotly.Figure()
+            with HBoxLayout(halign="center", height="50vh"):
+                vuetify.VCardTitle("Prediction of Uncertainty"),
+                self.figure = plotly.Figure()
+            
+        vuetify.VBtn("Auto Update", click=self.view_model.create_auto_update_cssstatus_figure)
+
+
+    def update_figure(self, figure: go.Figure) -> None:
+        er=self.figure.update(figure)
+        print("Currently plotted data:", self.figure.data)
+        print("Currently plotted data:", self.figure.layout)
+        print(er, "update_figure")
+        self.figure.state.flush()  # 
+        #print("figure info:", figure)
+        #print("figure data:", figure.data)
+        #print("figure layout:", figure.layout)
+        print("figure layout title:", figure.layout.title)
+        #print("figure layout image:", figure.layout.images)
+        print("number of images:", len(figure.layout.images))
+        for image in figure.layout.images:
+            md5sum = hashlib.md5(image.source.encode('utf-8')).hexdigest()
+            print("image source md5sum:", md5sum)
+ 
+
             #vuetify.VCard(
             #    vuetify.VCardTitle("Temporal Analysis"),
             #    vuetify.VCardText("Content for Temporal Analysis tab goes here."),

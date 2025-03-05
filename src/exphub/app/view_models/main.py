@@ -1,6 +1,7 @@
 """Module for the main ViewModel."""
 
 from typing import Any, Dict
+import time
 from nova.mvvm.interface import BindingInterface
 
 
@@ -14,6 +15,7 @@ from ..models.newtabtemplate import NewTabTemplateModel
 #from pyvista import Plotter  # just for typing
 #from ..models.pyvista import PyVistaConfig
 
+from trame.app.asynchronous import create_task
 
 #from ..models.css_status import CSSStatusModel
 #from ..models.temporal_analysis import TemporalAnalysisModel    
@@ -37,9 +39,11 @@ class MainViewModel:
         self.experimentinfo_bind = binding.new_bind(self.model.experimentinfo, callback_after_update=self.change_callback)
         self.angleplan_bind = binding.new_bind(self.model.angleplan, callback_after_update=self.change_callback)
         self.eiccontrol_bind = binding.new_bind(self.model.eiccontrol, callback_after_update=self.change_callback)
-        self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.change_callback)
         self.temporalanalysis_bind = binding.new_bind(self.model.temporalanalysis, callback_after_update=self.change_callback)
 
+        #self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.change_callback)
+        self.cssstatus_bind = binding.new_bind(self.model.cssstatus, callback_after_update=self.update_cssstatus_figure)
+        self.cssstatus_updatefig_bind = binding.new_bind()
 ######################################################################################################################################################
 # wrong
 #        self.newtabtemplate_bind = binding.new_bind(self.model.newtabtemplate, callback_after_update=self.change_callback)
@@ -59,6 +63,9 @@ class MainViewModel:
         #self.pyvista_config_bind = binding.new_bind(linked_object=self.pyvista_config)
 
 
+        #self.create_auto_update_cssstatus_figure()
+
+
 
 
 
@@ -73,6 +80,7 @@ class MainViewModel:
         self.model.angleplan.load_ap(self.model.angleplan.plan_file)
         self.angleplan_bind.update_in_view(self.model.angleplan)
         self.eiccontrol_bind.update_in_view(self.model.eiccontrol)
+        self.cssstatus_bind.update_in_view(self.model.cssstatus)
 ######################################################################################################################################################
         self.newtabtemplate_bind.update_in_view(self.model.newtabtemplate)
 ######################################################################################################################################################
@@ -95,6 +103,18 @@ class MainViewModel:
 #        self.plotly_config_bind.update_in_view(self.plotly_config)
 #        self.plotly_figure_bind.update_in_view(self.plotly_config.get_figure())
 #
+
+    async def auto_update_cssstatus_figure(self) -> None:
+        while True:
+            time.sleep(14)
+            self.update_cssstatus_figure()
+
+    def create_auto_update_cssstatus_figure(self) -> None:
+        create_task(self.auto_update_cssstatus_figure())        
+
+    def update_cssstatus_figure(self, _: Any = None) -> None:
+        self.cssstatus_bind.update_in_view(self.model.cssstatus)
+        self.cssstatus_updatefig_bind.update_in_view(self.model.cssstatus.get_figure())
 
 
 
