@@ -85,7 +85,7 @@ class CSSStatusModel(BaseModel):
     def get_figure(self) -> go.Figure:
         screenshot = save_webpage_as_image(bl12cssstatus_urlsrc)
         timestamp = time.time()
-        #self.timestamp = timestamp
+        self.timestamp = timestamp
         image = Image.open(io.BytesIO(screenshot))
         width, height = image.size
         print("genratged fig md5sum:" + str(hash(image.tobytes())))
