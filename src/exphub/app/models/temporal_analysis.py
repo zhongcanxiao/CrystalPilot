@@ -24,6 +24,7 @@ class MantidWorkflow():
     #def set_up_mantid_info(self)->None:
         print("initializing mtd workflow")
         self.ipts=34069
+        self.ipts=35078
         self.output_path = '/SNS/TOPAZ/IPTS-{:d}/shared/autoreduce/live_data/'.format(self.ipts)
         self.calib_fname = '/SNS/TOPAZ/IPTS-{:d}/shared/calibration/TOPAZ_2025A_AG_3-3BN.DetCal'.format(self.ipts)
 
@@ -400,7 +401,9 @@ class MantidWorkflow():
 
             # Pause briefly to let the plots be updated
             #time.sleep(15)
+        print("============================================================================================")
         print("live data reduction started")
+        print("============================================================================================")
         get_and_update_run_info_of_current_run()
         load_config_of_current_run()
         refine_ub_of_current_run()
@@ -429,8 +432,15 @@ class TemporalAnalysisModel(BaseModel):
     def get_figure_intensity(self) -> go.Figure:
         #self.timestamp = time.time()
         fig = go.Figure()
-        self.time_steps=self.mtd_workflow.measure_times
+        #self.time_steps=self.mtd_workflow.measure_times
+        time_steps=self.mtd_workflow.measure_times
         intensity_data = self.mtd_workflow.intensity_ratios
+        print("============================================================================================")
+        print("time_steps = self.mtd_workflow.measure_times")
+        print(time_steps , self.mtd_workflow.measure_times )
+        print("intensity_data = self.mtd_workflow.intensity_ratios")
+        print(intensity_data , self.mtd_workflow.intensity_ratios )
+        print("============================================================================================")
         #self.intensity_data = self.mtd_workflow.intensity_ratios
 
     #    ax_intensity.plot(measure_times, intensity_ratios, '-o', label='Peak I/σ(I)')
@@ -439,7 +449,8 @@ class TemporalAnalysisModel(BaseModel):
     #    ax_rsig.set_ylabel('Rsig')
     #    ax_rsig.set_xlabel('Run time, seconds')
     #    ax_intensity.grid(True)
-        fig.add_trace(go.Scatter(x=self.time_steps, y=intensity_data, mode='lines+markers', name='Intensity Data'))
+        fig.add_trace(go.Scatter(x=time_steps, y=intensity_data, mode='lines+markers', name='Intensity Data'))
+        #fig.add_trace(go.Scatter(x=self.time_steps, y=intensity_data, mode='lines+markers', name='Intensity Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.intensity_data, mode='lines+markers', name='Intensity Data'))
         fig.update_layout(title='Prediction of Intensity'+str(self.timestamp)+" "+str(time.time()), xaxis_title='Time Steps', yaxis_title='Intensity')
         #time.sleep(7)
@@ -451,6 +462,12 @@ class TemporalAnalysisModel(BaseModel):
         uncertainty_data = self.mtd_workflow.rsigs
         #self.time_steps=self.mtd_workflow.measure_times
         #self.uncertainty_data = self.mtd_workflow.rsigs
+        print("============================================================================================")
+        print("time_steps = self.mtd_workflow.measure_times")
+        print(time_steps , self.mtd_workflow.measure_times )
+        print("uncertainty_data = self.mtd_workflow.rsigs")
+        print(uncertainty_data , self.mtd_workflow.rsigs )
+        print("============================================================================================")
         fig.add_trace(go.Scatter(x=time_steps, y=uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
         fig.update_layout(title='Prediction of Uncertainty'+str(self.timestamp)+str(time.time()), xaxis_title='Time Steps', yaxis_title='Uncertainty')

@@ -138,13 +138,19 @@ class MainViewModel:
     def create_auto_update_temporalanalysis_figure(self) -> None:
         self.model.temporalanalysis.start_reading_live_mtd_data()
         asyncio.create_task(self.get_live_mtd_data()) 
-        asyncio.create_task(self.auto_update_temporalanalysis_figure()) 
+        #asyncio.create_task(self.auto_update_temporalanalysis_figure()) 
 
 
-    def get_live_mtd_data(self) -> None:
+    async def get_live_mtd_data(self) -> None:
         while True:
+            print("============================================================================================")
+            print("get_live_mtd_data")
             self.model.temporalanalysis.mtd_workflow.live_data_reduction()
-            asyncio.sleep(10)
+            print("get_live_mtd_data done")
+            print("============================================================================================")
+            self.update_temporalanalysis_figure()
+            print("=====================update temporal done=======================================================================")
+            await asyncio.sleep(10)
         
 
 

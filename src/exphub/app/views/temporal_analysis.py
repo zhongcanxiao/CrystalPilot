@@ -59,7 +59,9 @@ class TemporalAnalysisView:
     def update_figure_intensity(self, figure_intensity: go.Figure) -> None:
         self.figure_intensity.update(figure_intensity)
         self.figure_intensity.state.flush()
+        print("============================================================================================")
         print("update_figure_intensity")
+        print("============================================================================================")
         #print("Currently plotted data:", self.figure_intensity.data)
         #print("Currently plotted data:", self.figure_intensity.layout)
         #print("Currently plotted data:", self.figure_intensity.layout.title)
@@ -74,7 +76,9 @@ class TemporalAnalysisView:
     def update_figure_uncertainty(self,figure_uncertainty:go.Figure) -> None:
         self.figure_uncertainty.update(figure_uncertainty)
         self.figure_uncertainty.state.flush()
+        print("============================================================================================")
         print("update_figure_uncertainty")
+        print("============================================================================================")
         #print("Currently plotted data:", self.figure.data)
         #print("Currently plotted data:", self.figure.layout)
         #print(er, "update_figure")
