@@ -36,16 +36,16 @@ def save_webpage_as_image(url, output_file="webpage.png"):
     # Take screenshot and save it
     time.sleep(0.4)
     screenshot = browser.get_screenshot_as_png()
-    with open(output_file, "wb") as file:
-        file.write(screenshot)
-    print(f"Screenshot saved to {output_file}")
+    #with open(output_file, "wb") as file:
+    #    file.write(screenshot)
+    #print(f"Screenshot saved to {output_file}")
     
     # Close browser
     
     return screenshot
 
 
-save_webpage_as_image(bl12cssstatus_urlsrc)
+#save_webpage_as_image(bl12cssstatus_urlsrc)
 
 class CSSStatusModel(BaseModel):
     headers: List[str] = Field(default=["Title", "Comment", "phi", "omega", "Wait For", "Value", "Or Time"])
@@ -69,6 +69,7 @@ class CSSStatusModel(BaseModel):
     #plot_type: str = Field(default="Preview", title="Plot Type")
     #plot_type_options: list[str] = ["heatmap", "scatter"]
     plot_type_options: list[str] = ["Detector", "D-space"]
+    #init_image: bytes = save_webpage_as_image(bl12cssstatus_urlsrc)
     #plot_type_options: list[str] = ["Detector", "D-space", "Q-space", "4x4 and ROI D-space", "ROI Q-space", "IOCSTATS", "Det", "N1", "Main Detector", "N1", "BL12", "DID", "S"]
     #fig: go.Figure = Field(default=go.Figure(), title="Figure")
 
