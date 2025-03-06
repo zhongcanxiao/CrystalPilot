@@ -70,6 +70,7 @@ class CSSStatusModel(BaseModel):
     #plot_type_options: list[str] = ["heatmap", "scatter"]
     plot_type_options: list[str] = ["Detector", "D-space"]
     #plot_type_options: list[str] = ["Detector", "D-space", "Q-space", "4x4 and ROI D-space", "ROI Q-space", "IOCSTATS", "Det", "N1", "Main Detector", "N1", "BL12", "DID", "S"]
+    #fig: go.Figure = Field(default=go.Figure(), title="Figure")
 
     #@computed_field  # type: ignore
     #@property
@@ -87,7 +88,7 @@ class CSSStatusModel(BaseModel):
         image = Image.open(io.BytesIO(screenshot))
         width, height = image.size
         timestamp = time.time()
-        self.timestamp = timestamp
+        #self.timestamp = timestamp
         print("genratged fig md5sum:" + str(hash(image.tobytes())))
         match self.plot_type:
             case "Detector":

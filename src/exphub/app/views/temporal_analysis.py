@@ -60,14 +60,14 @@ class TemporalAnalysisView:
         self.figure_intensity.update(figure_intensity)
         self.figure_intensity.state.flush()
         print("update_figure_intensity")
-        print("Currently plotted data:", self.figure_intensity.data)
-        print("Currently plotted data:", self.figure_intensity.layout)
-        print("Currently plotted data:", self.figure_intensity.layout.title)
-        print("Currently plotted data:", self.figure_intensity.layout.images)
-        print("number of images:", len(self.figure_intensity.layout.images))
-        for image in self.figure_intensity.layout.images:
-            md5sum = hashlib.md5(image.source.encode('utf-8')).hexdigest()
-            print("image source md5sum:", md5sum)
+        #print("Currently plotted data:", self.figure_intensity.data)
+        #print("Currently plotted data:", self.figure_intensity.layout)
+        #print("Currently plotted data:", self.figure_intensity.layout.title)
+        #print("Currently plotted data:", self.figure_intensity.layout.images)
+        #print("number of images:", len(self.figure_intensity.layout.images))
+        #for image in self.figure_intensity.layout.images:
+        #    md5sum = hashlib.md5(image.source.encode('utf-8')).hexdigest()
+        #    print("image source md5sum:", md5sum)
         #print("Currently plotted data:", self.figure_intensity.layout.images)     
         #print(er, "update_figure")
         #self.figure.state.flush()  # 

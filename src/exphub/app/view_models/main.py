@@ -16,6 +16,7 @@ from ..models.newtabtemplate import NewTabTemplateModel
 #from ..models.pyvista import PyVistaConfig
 
 from trame.app.asynchronous import create_task
+import asyncio
 
 #from ..models.css_status import CSSStatusModel
 #from ..models.temporal_analysis import TemporalAnalysisModel    
@@ -107,29 +108,35 @@ class MainViewModel:
 #        self.plotly_figure_bind.update_in_view(self.plotly_config.get_figure())
 #
 
-    async def auto_update_cssstatus_figure(self) -> None:
-        while True:
-            time.sleep(14)
-            self.update_cssstatus_figure()
-
-    def create_auto_update_cssstatus_figure(self) -> None:
-        create_task(self.auto_update_cssstatus_figure())        
-
     def update_cssstatus_figure(self, _: Any = None) -> None:
         self.cssstatus_bind.update_in_view(self.model.cssstatus)
         self.cssstatus_updatefig_bind.update_in_view(self.model.cssstatus.get_figure())
-        time.sleep(7)
+        #time.sleep(7)
 
-    def create_auto_update_temporalanalysis_figure(self) -> None:
-        pass
+    async def auto_update_cssstatus_figure(self) -> None:
+        while True:
+            self.update_cssstatus_figure()
+            await asyncio.sleep(1)
 
+    def create_auto_update_cssstatus_figure(self) -> None:
+        asyncio.create_task(self.auto_update_cssstatus_figure())        
+
+
+ 
     def update_temporalanalysis_figure(self, _: Any = None) -> None:
         self.temporalanalysis_bind.update_in_view(self.model.temporalanalysis)
         #self.temporalanalysis_updatefig_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity(),self.model.temporalanalysis.get_figure_uncertainty())
         self.temporalanalysis_updatefigure_intensity_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity())
         self.temporalanalysis_updatefigure_uncertainty_bind.update_in_view(self.model.temporalanalysis.get_figure_uncertainty())
-        time.sleep(7)
+        #time.sleep(7)
 
+    async def auto_update_temporalanalysis_figure(self) -> None:
+        while True:
+            self.update_temporalanalysis_figure()
+            await asyncio.sleep(1)
+
+    def create_auto_update_temporalanalysis_figure(self) -> None:
+        asyncio.create_task(self.auto_update_temporalanalysis_figure()) 
 
 
 
