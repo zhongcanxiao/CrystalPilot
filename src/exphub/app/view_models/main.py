@@ -136,8 +136,16 @@ class MainViewModel:
             await asyncio.sleep(1)
 
     def create_auto_update_temporalanalysis_figure(self) -> None:
+        self.model.temporalanalysis.start_reading_live_mtd_data()
+        asyncio.create_task(self.get_live_mtd_data()) 
         asyncio.create_task(self.auto_update_temporalanalysis_figure()) 
 
+
+    def get_live_mtd_data(self) -> None:
+        while True:
+            self.model.temporalanalysis.mtd_workflow.live_data_reduction()
+            asyncio.sleep(10)
+        
 
 
     def update_newtabtemplate_figure(self, _: Any = None) -> None:
