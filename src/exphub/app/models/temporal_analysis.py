@@ -14,6 +14,7 @@ import sys
 
 import asyncio
 from typing import ClassVar
+from sklearn.linear_model import LinearRegression
 # import mantid algorithms, numpy and matplotlib
 #matplotlib.use("Qt5Agg")
 #sys.path.append('/SNS/TOPAZ/shared/PythonPrograms/Python3Library')
@@ -250,7 +251,7 @@ class MantidWorkflow():
                 self.measure_time = self.current_run_end_time -self.initial_run_start_time
                 if self.measure_time >100000: 
                     print("Please check if neutron beam is on, or if the crystal is diffracting.")
-                    exit()
+            #        exit()
                 #continue
 
 
@@ -410,7 +411,11 @@ class MantidWorkflow():
         integrate_peaks_of_current_run()
         check_peaks_of_current_run()
 
-
+class TemporalData(BaseModel):
+    time: float
+    intensity: float
+    variance: float
+    uncertainty: float
 
 
         
@@ -426,6 +431,7 @@ class TemporalAnalysisModel(BaseModel):
     uncertainty_data: List[float] = Field(default=[0.0, 0.2, 0.6, 1.2, 2.0, 3.0, 4.2, 5.6, 7.2, 9.0], title="Uncertainty Data")
     #prediction_figure: go.Figure = Field(default_factory=go.Figure, title="Prediction Figure")
     timestamp: float=Field(default=0.0,title="timestamp")
+    all_time: List[float] = Field(default=[0.0, 10000], title="All Time")
     #mtd_workflow: MantidWorkflow = Field(default=MantidWorkflow(), title="Mantid Workflow")
     mtd_workflow: ClassVar[MantidWorkflow] = MantidWorkflow()
 
@@ -442,6 +448,19 @@ class TemporalAnalysisModel(BaseModel):
         print(intensity_data , self.mtd_workflow.intensity_ratios )
         print("============================================================================================")
         #self.intensity_data = self.mtd_workflow.intensity_ratios
+        # Reshape the data for sklearn
+        X = np.array(time_steps).reshape(-1, 1)
+        y = np.array(intensity_data)
+
+        # Create and fit the model
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # Get the slope (coefficient) and intercept
+        slope = model.coef_[0]
+        intercept = model.intercept_
+
+        print(f"Slope: {slope}, Intercept: {intercept}")
 
     #    ax_intensity.plot(measure_times, intensity_ratios, '-o', label='Peak I/σ(I)')
     #    ax_rsig.plot(measure_times, rsigs, '-o', label='Rsig')
@@ -449,6 +468,10 @@ class TemporalAnalysisModel(BaseModel):
     #    ax_rsig.set_ylabel('Rsig')
     #    ax_rsig.set_xlabel('Run time, seconds')
     #    ax_intensity.grid(True)
+    # Add a dashed line with the slope and intercept
+        x_range = np.linspace(min(time_steps), max(time_steps), 100)
+        y_range = slope * x_range + intercept
+        fig.add_trace(go.Scatter(x=x_range, y=y_range, mode='lines', name='Fitted Line', line=dict(dash='dash')))
         fig.add_trace(go.Scatter(x=time_steps, y=intensity_data, mode='lines+markers', name='Intensity Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=intensity_data, mode='lines+markers', name='Intensity Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.intensity_data, mode='lines+markers', name='Intensity Data'))
@@ -462,6 +485,27 @@ class TemporalAnalysisModel(BaseModel):
         uncertainty_data = self.mtd_workflow.rsigs
         #self.time_steps=self.mtd_workflow.measure_times
         #self.uncertainty_data = self.mtd_workflow.rsigs
+        # Fit the data with 1/x
+        X = np.array(time_steps).reshape(-1, 1)
+        y = np.array(uncertainty_data)
+
+        # Transform X to 1/X
+        X_transformed = 1 / X
+
+        # Create and fit the model
+        model = LinearRegression()
+        model.fit(X_transformed, y)
+
+        # Get the slope (coefficient) and intercept
+        slope = model.coef_[0]
+        intercept = model.intercept_
+
+        print(f"Slope: {slope}, Intercept: {intercept}")
+
+        # Add a dashed line with the slope and intercept
+        x_range = np.linspace(min(time_steps), max(time_steps), 100)
+        y_range = slope * (1 / x_range) + intercept
+        fig.add_trace(go.Scatter(x=x_range, y=y_range, mode='lines', name='Fitted Line', line=dict(dash='dash')))
         print("============================================================================================")
         print("time_steps = self.mtd_workflow.measure_times")
         print(time_steps , self.mtd_workflow.measure_times )
