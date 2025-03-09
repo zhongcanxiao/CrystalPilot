@@ -145,11 +145,15 @@ class MainViewModel:
         while True:
             print("============================================================================================")
             print("get_live_mtd_data")
-            self.model.temporalanalysis.mtd_workflow.live_data_reduction()
-            print("get_live_mtd_data done")
-            print("============================================================================================")
+            try:
+                self.model.temporalanalysis.mtd_workflow.live_data_reduction()
+                print("get_live_mtd_data done")
+                print("============================================================================================")
+                self.update_temporalanalysis_figure()
+                print("=====================update temporal done=======================================================================")
+            except Exception as e:
+                print(e)
             self.update_temporalanalysis_figure()
-            print("=====================update temporal done=======================================================================")
             await asyncio.sleep(10)
         
 
