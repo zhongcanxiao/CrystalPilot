@@ -145,13 +145,13 @@ class MantidWorkflow():
                     UpdateEvery=10,
                     AccumulationMethod='Add',
                     PreserveEvents=True,
-                    OutputWorkspace='live_event_ws')    
-            self.monitor_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+                    OutputWorkspace='live_event_ws_original')    
+            self.monitor_start_time = mtdapi.mtd['live_event_ws_original'].getRun().startTime().totalNanoseconds() * 1e-9
             time.sleep(1)
             #time.sleep(60)
         except RuntimeError as e:
             if 'Another MonitorLiveData thread is running' in str(e):
-                conflict_current_run=mtdapi.mtd['live_event_ws'].getRunNumber()
+                conflict_current_run=mtdapi.mtd['live_event_ws_original'].getRunNumber()
                 print("Warning: Another MonitorLiveData thread is already running for TOPAZ run %s."%(str(conflict_current_run)),
                       "\nIt will continue with the current run unless you stop the existing instance manually or use a different OutputWorkspace.")
                 sys.exit(1)
@@ -161,11 +161,11 @@ class MantidWorkflow():
         #self.run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
             
         # Proceed with data processing
-        if not mtdapi.mtd.doesExist('live_event_ws'):
+        if not mtdapi.mtd.doesExist('live_event_ws_original'):
             print("Live data workspace does not exist. Exiting.")
             exit(1)
-        self.initial_run = mtdapi.mtd['live_event_ws'].getRunNumber()
-        self.initial_run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+        self.initial_run = mtdapi.mtd['live_event_ws_original'].getRunNumber()
+        self.initial_run_start_time = mtdapi.mtd['live_event_ws_original'].getRun().startTime().totalNanoseconds() * 1e-9
         print(f"initial run: {self.initial_run}")
 
         # update the run number for live data reduction
@@ -191,16 +191,16 @@ class MantidWorkflow():
             #############################################################################################################################################################
             # ''' check if the run number has changed, if so, save the results and clear the existing data , and update the run infos'''
             #############################################################################################################################################################
-            current_run=mtdapi.mtd['live_event_ws'].getRunNumber()
+            current_run=mtdapi.mtd['live_event_ws_original'].getRunNumber()
 
             # Get the first event list
             print("====================================================================================================")
             print("Getting the first event list")
-            evList = mtdapi.mtd['live_event_ws'].getSpectrum(0)
+            #evList = mtdapi.mtd['live_event_ws'].getSpectrum(0)
 
             # Add an offset to the pulsetime (wall-clock time) of each event in the list.
-            print("First pulse time before addPulsetime: {}".format(evList.getPulseTimes()[0]))
-            current_run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+            #print("First pulse time before addPulsetime: {}".format(evList.getPulseTimes()[0]))
+            current_run_start_time = mtdapi.mtd['live_event_ws_original'].getRun().startTime().totalNanoseconds() * 1e-9
 
             if current_run != self.current_run:
                 # Save the results
@@ -229,7 +229,18 @@ class MantidWorkflow():
             #############################################################################################################################################################
             #''' Load the calibration file and monitor data, and integrate the peaks'''
             #############################################################################################################################################################
+            mtdapi.CloneWorkspace(InputWorkspace='live_event_ws_original', OutputWorkspace='live_event_ws')
+            print("====================================================================================================")
+            print("Loading the calibration file and monitor data, and integrating the peaks")   
+            print("first filterbytime")
+            print("====================================================================================================")
+            mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
+                                StartTime=0, StopTime=1)
             mtdapi.LoadIsawDetCal(InputWorkspace='live_event_ws', Filename=self.calib_fname)
+            mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
+                                StartTime=0, StopTime=1)
+            print("second filterbytime")
+            print("====================================================================================================")
             monitor_ws=mtdapi.mtd['live_event_ws'].getMonitorWorkspace()
             integrated_monitor_ws = mtdapi.Integration( InputWorkspace=monitor_ws, 
                               RangeLower=self.min_monitor_tof, RangeUpper=self.max_monitor_tof, 
@@ -240,6 +251,10 @@ class MantidWorkflow():
 
             #
             mtdapi.SetGoniometer(Workspace='live_event_ws', Goniometers='Universal')
+            mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
+                                StartTime=0, StopTime=1)
+            print("3rd filterbytime")
+            print("====================================================================================================")
 
         def refine_ub_of_current_run():
             #############################################################################################################################################################
@@ -403,9 +418,71 @@ class MantidWorkflow():
             np.savetxt(self.output_path + 'live_data_%s_results.csv'%(str(self.current_run)), results, delimiter=',', header='', comments='')
 
 
-            ##############################################################################################
-            # time series data
-            ##############################################################################################
+#        def get_time_series_data(start_record_time:float)->np.array:
+#        #def get_time_series_data(start_record_time:float, end_record_time:float)->np.array:
+#            ##############################################################################################
+#            # time series data
+#            ##############################################################################################
+#            start_record_time = self.monitor_start_time
+#            end_record_time = self.monitor_start_time 
+#            mtdapi.StartLiveData(
+#                    Instrument='TOPAZ',
+#                    Listener='SNSLiveEventDataListener',
+#                    FromTime=True,
+#                    StartTime=start_record_time,
+#                    LastTimeStamp=end_record_time,
+#                    UpdateEvery=0,
+#                    AccumulationMethod='Add',
+#                    PreserveEvents=True,
+#                    OutputWorkspace='live_event_ws_interval')
+
+
+##        def get_time_series_data()->np.array:
+##        #def get_time_series_data(start_record_time:float, end_record_time:float)->np.array:
+#            ##############################################################################################
+#            # time series data
+#            ##############################################################################################
+#            start_record_time = self.monitor_start_time
+#            end_record_time = self.monitor_start_time 
+#            mtdapi.StartLiveData(
+#                    Instrument='TOPAZ',
+#                    Listener='SNSLiveEventDataListener',
+#                    FromTime=True,
+#                    StartTime=start_record_time,
+#                    LastTimeStamp=end_record_time,
+#                    UpdateEvery=0,
+#                    AccumulationMethod='Add',
+#                    PreserveEvents=True,
+#                    OutputWorkspace='live_event_ws_interval')
+#
+#
+#
+#            self.monitor_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+#            time.sleep(1)
+#            try:
+#                mtdapi.StartLiveData(
+#                        Instrument='TOPAZ',
+#                        Listener='SNSLiveEventDataListener',
+#                        UpdateEvery=10,
+#                        AccumulationMethod='Add',
+#                        PreserveEvents=True,
+#                        OutputWorkspace='live_event_ws')    
+#                self.monitor_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+#                time.sleep(1)
+#                #time.sleep(60)
+#            except RuntimeError as e:
+#                if 'Another MonitorLiveData thread is running' in str(e):
+#                    conflict_current_run=mtdapi.mtd['live_event_ws'].getRunNumber()
+#                    print("Warning: Another MonitorLiveData thread is already running for TOPAZ run %s."%(str(conflict_current_run)),
+#                          "\nIt will continue with the current run unless you stop the existing instance manually or use a different OutputWorkspace.")
+#                    sys.exit(1)
+#                else:
+#                    print(f"Unexpected error occurred: {str(e)}")
+#                    raise
+#            #self.run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
+# 
+
+
             print("self.time_interval",self.time_interval)
             print("self.measure_time",self.measure_time)
             print("self.total_time_of_run",self.total_time_of_run)
@@ -434,7 +511,7 @@ class MantidWorkflow():
             box_size_inhkl=[0.03,0.03,0.03]
             h_box_len,k_box_len,l_box_len = box_size_inhkl
             
-            h_bin_num =bin_size[0]
+            h_bin_num = bin_size[0]
             k_bin_num = bin_size[1]
             l_bin_num = bin_size[2]
         
@@ -454,6 +531,18 @@ class MantidWorkflow():
                 stop_time = self.timeseries[i+1]*1.0
                 mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
                                 StartTime=start_time, StopTime=stop_time)
+                #start_record_time=self.current_run_start_time+self.time_interval
+
+                #mtdapi.StartLiveData(
+                #        Instrument='TOPAZ',
+                #        Listener='SNSLiveEventDataListener',
+                #        FromTime=True,
+                #        StartTime=start_time,
+                #        LastTimeStamp=stop_time,
+                #        UpdateEvery=0,
+                #        AccumulationMethod='Add',
+                #        PreserveEvents=True,
+                #        OutputWorkspace='timestep_event_ws')
                 mtdapi.ConvertToMD(InputWorkspace='timestep_event_ws', 
                                 QDimensions='Q3D', dEAnalysisMode='Elastic', 
                                 Q3DFrames=Q_box, QConversionScales='HKL', 
@@ -481,7 +570,7 @@ class MantidWorkflow():
             
 
 
-        def get_time_series_data()->np.array:
+        def get_time_series_data_0()->np.array:
             
 
             peaks_ws=mtdapi.LoadIsawPeaks(Filename=peaks_filename)
