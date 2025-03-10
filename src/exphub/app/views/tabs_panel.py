@@ -16,7 +16,7 @@ class TabsPanel:
     def create_ui(self) -> None:
         with vuetify.VTabs(v_model=("active_tab", 0), classes="pl-5"):
             vuetify.VTab("IPTS Info",           value=1)  
-            vuetify.VTab("Experiment Prediction",           value=2)  
+            vuetify.VTab("Live Data Prediction",           value=2)  
             vuetify.VTab("Experiment Steering",     value=3)
             #vuetify.VTab("EIC Control",         value=4)
             vuetify.VTab("Instrument Status",   value=5) 

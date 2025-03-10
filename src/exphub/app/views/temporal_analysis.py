@@ -45,6 +45,10 @@ class TemporalAnalysisView:
             #    items="model_cssstatus.axis_options",
             #    type="select",
             #)
+        with GridLayout(columns=1):
+            InputField(
+                v_model="model_temporalanalysis.time_interval",
+            )
         with GridLayout(columns=2, classes="mb-2"):
             with HBoxLayout(halign="center", height="50vh"):
                 vuetify.VCardTitle("Prediction of Intensity"),

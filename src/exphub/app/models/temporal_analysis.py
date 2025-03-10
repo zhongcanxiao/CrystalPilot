@@ -21,7 +21,7 @@ from sklearn.linear_model import LinearRegression
 #from SCDTools import recenter_peaks_workspace
 
 class MantidWorkflow():
-    def __init__(self)->None:
+    def __init__(self,temporal_time_interval)->None:
     #def set_up_mantid_info(self)->None:
         print("initializing mtd workflow")
         self.ipts=34069
@@ -122,7 +122,7 @@ class MantidWorkflow():
 
         self.maxpeak_intI=0
 
-        self.time_interval=10
+        self.time_interval=temporal_time_interval
         self.total_time_of_run=0
         self.total_numberof_time_intervals=1
         self.time_of_poissonprocess=0
@@ -149,6 +149,7 @@ class MantidWorkflow():
                     Instrument='TOPAZ',
                     Listener='SNSLiveEventDataListener',
                     UpdateEvery=10,
+                    #UpdateEvery=self.time_interval,
                     AccumulationMethod='Add',
                     PreserveEvents=True,
                     OutputWorkspace='live_event_ws')    
@@ -562,7 +563,7 @@ class MantidWorkflow():
 #            #self.run_start_time = mtdapi.mtd['live_event_ws'].getRun().startTime().totalNanoseconds() * 1e-9
 # 
             
-            self.time_interval=10
+            #self.time_interval=10
             self.total_time_of_run=self.measure_time*1e-0
             self.total_numberof_time_intervals=int(self.total_time_of_run/self.time_interval)-len(self.timeseries_plt)
             #TODO: copy in init
@@ -1022,8 +1023,8 @@ class TemporalAnalysisModel(BaseModel):
     headers: List[str] = Field(default=["Title", "Comment", "phi", "omega", "Wait For", "Value", "Or Time"])
     #headers: List[str] = Field(default=["Title", "Comment", "BL12:Mot:goniokm:phi", "BL12:Mot:goniokm:omega", "Wait For", "Value", "Or Time"])
     table_test: List[Dict] = Field(default=[{"title":"1","header":"h"}])
-    prediction_model_type: str = Field(default="Linear Interpolation", title="Prediction Model")
-    prediction_model_type_options: List[str] = ["Linear Interpolation", "Poisson Model"]
+    prediction_model_type: str = Field(default="Poisson Model", title="Prediction Model")
+    prediction_model_type_options: List[str] = ["Poisson Model", "Linear Interpolation"]
     time_steps: List[float] = Field(default=[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], title="Time Steps")
     intensity_data: List[float] = Field(default=[0.0, 1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0], title="Intensity Data")
     variance_data: List[float] = Field(default=[0.0, 0.1, 0.4, 0.9, 1.6, 2.5, 3.6, 4.9, 6.4, 8.1], title="Variance Data")
@@ -1032,7 +1033,8 @@ class TemporalAnalysisModel(BaseModel):
     timestamp: float=Field(default=0.0,title="timestamp")
     all_time: List[float] = Field(default=[0.0, 10000], title="All Time")
     #mtd_workflow: MantidWorkflow = Field(default=MantidWorkflow(), title="Mantid Workflow")
-    mtd_workflow: ClassVar[MantidWorkflow] = MantidWorkflow()
+    time_interval : float=Field(default=1.0,title="Time Interval")
+    mtd_workflow: ClassVar[MantidWorkflow] = MantidWorkflow(time_interval)
 
     def get_figure_intensity(self) -> go.Figure:
         #self.timestamp = time.time()
@@ -1082,7 +1084,7 @@ class TemporalAnalysisModel(BaseModel):
         fig.add_trace(go.Scatter(x=time_steps, y=intensity_data, mode='lines+markers', name='History Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=intensity_data, mode='lines+markers', name='History Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.intensity_data, mode='lines+markers', name='Intensity Data'))
-        fig.update_layout(title='Prediction of Intensity with '+self.prediction_model_type, xaxis_title='Time Steps', yaxis_title='Intensity')
+        fig.update_layout(title='Prediction of Intensity with '+self.prediction_model_type, xaxis_title='Time Steps (s)', yaxis_title='Intensity')
         #time.sleep(7)
         return fig
     def get_figure_uncertainty(self) -> go.Figure:
@@ -1127,7 +1129,7 @@ class TemporalAnalysisModel(BaseModel):
         print("============================================================================================")
         fig.add_trace(go.Scatter(x=time_steps, y=uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
-        fig.update_layout(title='Prediction of Uncertainty with '+self.prediction_model_type, xaxis_title='Time Steps', yaxis_title='Uncertainty')
+        fig.update_layout(title='Prediction of Uncertainty with '+self.prediction_model_type, xaxis_title='Time Steps (s)', yaxis_title='Uncertainty (%)')
         #fig.update_layout(title='Prediction of Uncertainty'+str(self.timestamp)+str(time.time()), xaxis_title='Time Steps', yaxis_title='Uncertainty')
         #time.sleep(7)
         return fig
