@@ -22,16 +22,16 @@ class MainApp(ThemedApp):
         super().__init__()
         self.server = get_server(None, client_type="vue3")
         binding = TrameBinding(self.server.state)
-        self.server.state.trame__title = "Crystal Pilot"
+        self.server.state.trame__title = "CrystalPilot"
         self.view_models = create_viewmodels(binding)
         self.view_model: MainViewModel = self.view_models["main"]
         self.create_ui()
 
     def create_ui(self) -> None:
-        self.state.trame__title = "Crystal Pilot"
+        self.state.trame__title = "CrystalPilot"
 
         with super().create_ui() as layout:
-            layout.toolbar_title.set_text("Crystal Pilot")
+            layout.toolbar_title.set_text("CrystalPilot")
             with layout.pre_content:
                 TabsPanel(self.view_models["main"])
             with layout.content:

@@ -11,10 +11,14 @@ class AnglePlanView:
         #self.view_model.angleplan_bind.connect("model.angleplan")
         self.view_model.angleplan_bind.connect("model_angleplan")
 
+        self.view_model.eiccontrol_bind.connect("model_eiccontrol")
         self.create_ui()
 
     def create_ui(self) -> None:
         #with vuetify.VRow():
+        with GridLayout(columns=2):
+            RemoteFileInput(v_model="model_eiccontrol.token_file", base_paths=["/HFIR", "/SNS"])
+            vuetify.VBtn("Authenticate", click=self.view_model.call_load_token)
         with GridLayout(columns=4):
             InputField(v_model="model_angleplan.plan_name")#, type="button", label="Upload")
             InputField(v_model="model_angleplan.plan_type", type="select", items="model_angleplan.plan_type_list")
@@ -95,8 +99,10 @@ class AnglePlanView:
             hide_details=True,
         )
  
-        with GridLayout(columns=1):
+        with GridLayout(columns=3):
+            InputField(v_model="model_eiccontrol.is_simulation", type="checkbox")
             vuetify.VBtn("Update Angles", click=self.view_model.update_view)
+            vuetify.VBtn("Submit through EIC", click=self.view_model.submit_angle_plan)
 
 
 
@@ -107,14 +113,8 @@ class AnglePlanView:
 #                    vuetify.VListItem(v_model="value")
 
 
-        RemoteFileInput(v_model="model_eiccontrol.token_file", base_paths=["/HFIR", "/SNS"])
-        with GridLayout(columns=1):
-            vuetify.VBtn("Authenticate", click=self.view_model.call_load_token)
-        InputField(v_model="model_eiccontrol.is_simulation", type="checkbox")
       #  InputField(v_model="model_eiccontrol.IPTS_number")
        # InputField(v_model="model_eiccontrol.instrument_name")
-        with GridLayout(columns=1):
-            vuetify.VBtn("Submit through EIC", click=self.view_model.submit_angle_plan)
 
 
         with GridLayout(columns=1):

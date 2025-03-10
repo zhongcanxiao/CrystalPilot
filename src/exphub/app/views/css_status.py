@@ -79,7 +79,10 @@ class CSSStatusView:
                     xref="paper", yref="paper",
                     x=0, y=1,
                     sizex=1, sizey=1,
-                    xanchor="left", yanchor="top"
+                    xanchor="left", yanchor="top",
+                    layer="below",
+                    sizing="stretch",
+                    opacity=1,
                 )
             )
 
