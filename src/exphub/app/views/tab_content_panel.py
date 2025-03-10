@@ -32,12 +32,12 @@ class TabContentPanel:
                             TemporalAnalysisView(self.view_model)
                         with vuetify.VWindowItem(value=3):
                             AnglePlanView(self.view_model)
-                        with vuetify.VWindowItem(value=4):
-                            EICControlView(self.view_model)
+                       # with vuetify.VWindowItem(value=4):
+                       #     EICControlView(self.view_model)
                         with vuetify.VWindowItem(value=5):
                             CSSStatusView(self.view_model)
-                        with vuetify.VWindowItem(value=6):
-                            NewTabTemplateView(self.view_model)
+                       # with vuetify.VWindowItem(value=6):
+                       #     NewTabTemplateView(self.view_model)
             with vuetify.VCardActions():
                 vuetify.VBtn("Data Visualization", click=self.open_data_visualization)
                 vuetify.VBtn("Data Reduction", click=self.open_data_reduction)
