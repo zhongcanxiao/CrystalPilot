@@ -1082,7 +1082,7 @@ class TemporalAnalysisModel(BaseModel):
         fig.add_trace(go.Scatter(x=time_steps, y=intensity_data, mode='lines+markers', name='History Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=intensity_data, mode='lines+markers', name='History Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.intensity_data, mode='lines+markers', name='Intensity Data'))
-        fig.update_layout(title='Prediction of Intensity'+str(self.timestamp)+" "+str(time.time()), xaxis_title='Time Steps', yaxis_title='Intensity')
+        fig.update_layout(title='Prediction of Intensity with '+self.prediction_model_type, xaxis_title='Time Steps', yaxis_title='Intensity')
         #time.sleep(7)
         return fig
     def get_figure_uncertainty(self) -> go.Figure:
@@ -1127,7 +1127,7 @@ class TemporalAnalysisModel(BaseModel):
         print("============================================================================================")
         fig.add_trace(go.Scatter(x=time_steps, y=uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
         #fig.add_trace(go.Scatter(x=self.time_steps, y=self.uncertainty_data, mode='lines+markers', name='Uncertainty Data'))
-        fig.update_layout(title='Prediction of Uncertainty'+str(self.timestamp)+str(time.time()), xaxis_title='Time Steps', yaxis_title='Uncertainty')
+        fig.update_layout(title='Prediction of Uncertainty with '+self.prediction_model_type, xaxis_title='Time Steps', yaxis_title='Uncertainty')
         #fig.update_layout(title='Prediction of Uncertainty'+str(self.timestamp)+str(time.time()), xaxis_title='Time Steps', yaxis_title='Uncertainty')
         #time.sleep(7)
         return fig
