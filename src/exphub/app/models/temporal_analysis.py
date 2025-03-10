@@ -267,13 +267,22 @@ class MantidWorkflow():
             #''' Refine the UB matrix'''
             #############################################################################################################################################################
             #TODO: why convert to md
-            mtdapi.ConvertToMD(InputWorkspace='live_event_ws', 
+            mtdapi.CloneWorkspace(InputWorkspace='live_event_ws', OutputWorkspace='live_event_ws_peak')
+            mtdapi.ConvertToMD(InputWorkspace='live_event_ws_peak', 
                 QDimensions="Q3D", dEAnalysisMode="Elastic", 
                 Q3DFrames='Q_sample',
                 QConversionScales="Q in A^-1", 
                 LorentzCorrection='1',
                 Uproj='1,0,0', Vproj='0,1,0', Wproj='0,0,1',
                 OutputWorkspace='live_event_md_Qsample', MinValues='-12,-12,-12', MaxValues='12,12,12')
+            
+            #mtdapi.ConvertToMD(InputWorkspace='live_event_ws', 
+            #    QDimensions="Q3D", dEAnalysisMode="Elastic", 
+            #    Q3DFrames='Q_sample',
+            #    QConversionScales="Q in A^-1", 
+            #    LorentzCorrection='1',
+            #    Uproj='1,0,0', Vproj='0,1,0', Wproj='0,0,1',
+            #    OutputWorkspace='live_event_md_Qsample', MinValues='-12,-12,-12', MaxValues='12,12,12')
             mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
                                 StartTime=0, StopTime=1)
             print("4 filterbytime")
@@ -312,18 +321,19 @@ class MantidWorkflow():
             #############################################################################################################################################################
             #''' Integrate the peaks and predict the peaks'''
             #############################################################################################################################################################
-            mtdapi.CloneWorkspace(InputWorkspace='live_event_ws', OutputWorkspace='live_event_ws_time_series')
+            mtdapi.CloneWorkspace(InputWorkspace='live_event_ws', OutputWorkspace='live_event_ws_peak')
             
-            mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
-                                StartTime=0, StopTime=1)
-            print("7 filterbytime")
-            print("====================================================================================================")
+            #mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
+            #                    StartTime=0, StopTime=1)
+            #print("7 filterbytime")
+            #print("====================================================================================================")
             
             mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
                                 StartTime=0, StopTime=1)
             print("7.0 filterbytime")
             print("====================================================================================================")
             
+            ## cause error in filter by time
             mtdapi.IndexPeaks(PeaksWorkspace='live_peaks_ws', Tolerance=0.12, ToleranceForSatellite=0.10000000000000001, RoundHKLs=False, CommonUBForAll=True)
             mtdapi.FilterByTime(InputWorkspace='live_event_ws_time_series', OutputWorkspace='timestep_event_ws',
                                 StartTime=0, StopTime=1)
@@ -372,7 +382,7 @@ class MantidWorkflow():
             print("8 filterbytime")
             print("====================================================================================================")
             
-            mtdapi.IntegrateEllipsoids(InputWorkspace='live_event_ws', 
+            mtdapi.IntegrateEllipsoids(InputWorkspace='live_event_ws_peak', 
                 PeaksWorkspace='live_predict_peaks_ws', 
                 RegionRadius=0.2, SpecifySize=True, 
                 PeakSize=0.09, BackgroundInnerSize=0.11, BackgroundOuterSize=0.14, 
@@ -585,6 +595,10 @@ class MantidWorkflow():
                 stop_time = self.timeseries[i+1]*1.0
                 mtdapi.FilterByTime(InputWorkspace='live_event_ws_time_series', OutputWorkspace='timestep_event_ws',
                                 StartTime=start_time, StopTime=stop_time)
+                print("filter 10.0")
+                mtdapi.FilterByTime(InputWorkspace='live_event_ws', OutputWorkspace='timestep_event_ws',
+                                StartTime=start_time, StopTime=stop_time)
+                print("filter 10.1")
                 #start_record_time=self.current_run_start_time+self.time_interval
 
                 #mtdapi.StartLiveData(
