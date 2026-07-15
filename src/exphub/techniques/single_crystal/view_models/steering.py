@@ -11,38 +11,17 @@ Moved out of ``app/view_models/main.py`` and renamed ``MainViewModel`` →
 """
 
 import asyncio
-import json
-import os
-import subprocess
-import tempfile
 import time
-from functools import lru_cache
-from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import plotly.graph_objects as go
 from nova.mvvm.interface import BindingInterface
 from pydantic import BaseModel, Field
 
-from ....core.beamline import active
 from ..models.root import SingleCrystalMainModel
-
-# Verbose tracing for ViewModel actions; off by default. Used to gate the
-# (~100) print statements scattered across this module which previously
-# spammed stdout on every UI interaction and per-second on the live-update
-# loop. Set CRYSTALPILOT_DEBUG=1 to re-enable.
-_DEBUG = bool(os.environ.get("CRYSTALPILOT_DEBUG"))
-
-
-def _trace(*args: Any) -> None:
-    if _DEBUG:
-        print(*args)
-
-
-@lru_cache(maxsize=1)
-def _load_optimizer_fallback_angles() -> dict[str, list[list[float]]]:
-    fixture = Path(__file__).parent.parent / "fixtures" / "optimizer_fallback_angles.json"
-    return json.loads(fixture.read_text())
+from .steering_angle_plan import AnglePlanActions
+from .steering_eic import EicActions
+from .tracing import _trace
 
 
 class SingleCrystalSteeringViewState(BaseModel):
@@ -146,6 +125,12 @@ class SingleCrystalSteeringViewModel:
 
         self.angleplan_updatefigure_coverage_bind = binding.new_bind()
 
+        # Domain collaborators (facade pattern): the public method names stay on
+        # this class — manifests, the agent verb allowlist, and views reference
+        # them by name — and forward to these delegates.
+        self._eic = EicActions(self)
+        self._angle_plan = AnglePlanActions(self)
+
         # Initialize temporalanalysis figures once at startup (no continuous callback)
         try:
             self.update_temporalanalysis_figure()
@@ -236,8 +221,7 @@ class SingleCrystalSteeringViewModel:
         self.angleplan_bind.update_in_view(self.model.angleplan)
 
     def upload_strategy(self) -> None:
-        self.model.angleplan.load_ap(self.model.angleplan.plan_file)
-        self._push_angleplan()
+        self._angle_plan.upload_strategy()
 
     # ------- targeted view-state pushes (cheap, one bind each) ------------
     def _push_angleplan(self) -> None:
@@ -255,48 +239,10 @@ class SingleCrystalSteeringViewModel:
     # print(self.model.angleplan.test_list)
 
     def submit_angle_plan(self) -> None:
-        # print("submit_angle_plan")
-        from ....core.beamline import active_technique
-
-        # Resolve the active technique's EIC row builder (P3a.2 seam) so the
-        # single-crystal CSV/row layout lives in the technique manifest and
-        # core/eic stays technique-agnostic, only submitting pre-built jobs.
-        row_builder = active_technique().eic_row_builder
-        # The single-crystal manifest always provides a row builder (asserted by
-        # test_manifest_exposes_row_builder_seam); narrow the Optional seam so
-        # the submit path can call its methods without a None-guard.
-        assert row_builder is not None
-
-        ipts_number = self.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        goniometer_type = self.model.angleplan.goniometer_type
-        angle_list = self.model.angleplan.angle_list
-        try:
-            try:
-                row_builder.write_strategy_csv(angle_list, ipts_number, goniometer_type)
-            except Exception as e:
-                print(f"Warning: failed to copy strategy to EIC location: {e}")
-            jobs = row_builder.build_jobs(angle_list, goniometer_type=goniometer_type)
-            self.model.eiccontrol.submit_jobs(
-                jobs,
-                ipts_number,
-                instrument_name,
-            )
-            if self.model.eiccontrol.is_simulation:
-                self.model.eiccontrol.eic_status = "job submission simulated"
-            else:
-                self.model.eiccontrol.eic_status = "jobs submitted"
-        except Exception as e:
-            self.model.eiccontrol.eic_status = f"submission failed: {e}"
-        self._push_eiccontrol()
+        self._eic.submit_angle_plan()
 
     def call_load_token(self) -> None:
-        try:
-            self.model.eiccontrol.load_token(self.model.eiccontrol.token_file)
-            self.model.eiccontrol.eic_status = "authenticated successfully"
-        except Exception as e:
-            self.model.eiccontrol.eic_status = f"authentication failed: {e}"
-        self._push_eiccontrol()
+        self._eic.call_load_token()
 
     #
     #
@@ -490,25 +436,13 @@ class SingleCrystalSteeringViewModel:
         self.newtabtemplate_updatefig_bind.update_in_view(self.model.newtabtemplate.get_figure())
 
     def stoprun(self) -> None:
-        ipts_number = self.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self.model.eiccontrol.stop_run(ipts_number, instrument_name)
-        self._push_eiccontrol()
+        self._eic.stoprun()
 
     def poll_job_statuses(self) -> None:
-        ipts_number = self.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        try:
-            self.model.eiccontrol.poll_job_statuses(ipts_number, instrument_name)
-        except Exception as e:
-            print(f"Error polling job statuses: {e}")
-        self._push_eiccontrol()
+        self._eic.poll_job_statuses()
 
     def abort_job(self, scan_id: int) -> None:
-        ipts_number = self.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self.model.eiccontrol.abort_job(scan_id, ipts_number, instrument_name)
-        self._push_eiccontrol()
+        self._eic.abort_job(scan_id)
 
     ##########################################################################################################################
     #  edit angle plans
@@ -516,182 +450,40 @@ class SingleCrystalSteeringViewModel:
     # import trame
     # trame_server=trame.app.get_server()
 
-    # @trame_server.controller.trigger('add_run')
+    # (trigger wiring lives in the view; bodies live in AnglePlanActions)
     def add_run(self) -> None:
-        _trace("add_run")
-        self.model.angleplan.is_editing_run = False
-        self.model.angleplan.run_record = self.model.angleplan.get_default_run_record()
-        self.model.angleplan.runedit_dialog = True
-        #### should be called after change object in python and want to sync with js object
-        self._push_angleplan()
+        self._angle_plan.add_run()
 
-    # trigger needed for passing js variable to fucntion call in view
-    # @trame_server.controller.trigger('edit_run')
     def edit_run(self, run_id: int) -> None:
-        _trace("edit_run", run_id)
-        self.model.angleplan.is_editing_run = True
-        run = next((r for r in self.model.angleplan.angle_list if r["id"] == run_id), None)
-        if run:
-            self.model.angleplan.run_record = run.copy()
-            self.model.angleplan.runedit_dialog = True
-        self._push_angleplan()
+        self._angle_plan.edit_run(run_id)
 
     def close_runedit_dialog(self) -> None:
-        _trace("close_runedit_dialog")
-        self.model.angleplan.runedit_dialog = False
-        self._push_angleplan()
+        self._angle_plan.close_runedit_dialog()
 
-    # @trame_server.controller.trigger('save_run')
     def save_run(self) -> None:
-        _trace("save_run")
-        print(self.model.angleplan.run_record["id"])
-        if self.model.angleplan.is_editing_run:
-            for i, run in enumerate(self.model.angleplan.angle_list):
-                if run["id"] == self.model.angleplan.run_record["id"]:
-                    self.model.angleplan.angle_list[i] = self.model.angleplan.run_record.copy()
-                    break
-        else:
-            max_id = max((r["id"] for r in self.model.angleplan.angle_list), default=0)
-            self.model.angleplan.run_record["id"] = max_id + 1
-            self.model.angleplan.angle_list.append(self.model.angleplan.run_record.copy())
-        self.model.angleplan.runedit_dialog = False
-        self._push_angleplan()
+        self._angle_plan.save_run()
 
-    # @trame_server.controller.trigger('remove_run')
     def remove_run(self, run_id: int) -> None:
-        _trace("remove_run", run_id)
-        self.model.angleplan.angle_list = [r for r in self.model.angleplan.angle_list if r["id"] != run_id]
-        self._push_angleplan()
+        self._angle_plan.remove_run(run_id)
 
     ############################### coverage figure update ###########################################################
     def update_coverage_figure(self, _: Any = None) -> None:
-        # self.temporalanalysis_updatefig_bind.update_in_view(self.model.temporalanalysis.get_figure_intensity(),self.model.temporalanalysis.get_figure_uncertainty())#noqa
-        self.angleplan_updatefigure_coverage_bind.update_in_view(self.model.angleplan.get_figure_coverage())
-        self._push_angleplan()
+        self._angle_plan.update_coverage_figure(_)
 
     def update_coverage_figure_with_symmetry(self, _: Any = None) -> None:
-        self.angleplan_updatefigure_coverage_bind.update_in_view(
-            self.model.angleplan.get_coverage_figure_with_symmetry()
-        )
-        self._push_angleplan()
+        self._angle_plan.update_coverage_figure_with_symmetry(_)
 
     def get_figure_coverage(self) -> go.Figure:
-        _trace("get_figure_coverage")
-        fig = self.model.angleplan.get_figure_coverage()
-        self._push_angleplan()
-        return fig
+        return self._angle_plan.get_figure_coverage()
 
     def show_coverage(self) -> None:
-        """Launch NeuXtalViz with the current angle plan.
-
-        1. Export current angle_list to a temp CSV.
-        2. Launch NXV via subprocess with --initialize-planner <UB> --open-plan <csv>.
-        3. Spawn an async task that waits for NXV to exit, then reimports the CSV.
-        """
-        print("show_cov: exporting plan and launching NeuXtalViz")
-
-        # Determine exchange CSV path (in the IPTS shared dir so NXV can also find it)
-        plan_csv = os.path.join(tempfile.gettempdir(), "crystalpilot_nxv_plan.csv")
-
-        # Export current strategy (may be empty — NXV will let user build from scratch)
-        self.model.angleplan.export_to_nxv_csv(plan_csv)
-
-        # UB matrix file from experiment info
-        ub_file = getattr(self.model.experimentinfo, "UBFileName", "")
-
-        # Build NXV launch command — NeuXtalViz-tools is a sibling repo
-        _code_dir = os.path.dirname(os.path.abspath(__file__))
-        # Walk up from view_models/ to CrystalPilot/, then go to sibling
-        _project_root = os.path.normpath(os.path.join(_code_dir, "../../../.."))
-        nxv_python = os.path.join(os.path.dirname(_project_root), "NeuXtalViz-tools", "src", "NeuXtalViz.py")
-        nxv_conda_env = "nxv"
-        nxv_activate = os.path.expanduser("~/.miniforge/bin/activate")
-
-        cmd_parts = [
-            f"source '{nxv_activate}'",
-            f"conda activate {nxv_conda_env}",
-            f"python '{nxv_python}'",
-        ]
-        if ub_file and os.path.isfile(ub_file):
-            cmd_parts[-1] += f" --initialize-planner '{ub_file}'"
-        cmd_parts[-1] += f" --open-plan '{plan_csv}'"
-
-        shell_cmd = " && ".join(cmd_parts)
-
-        # Launch NXV as a subprocess and wait for it asynchronously
-        self._nxv_plan_csv = plan_csv
-        self._nxv_proc = subprocess.Popen(shell_cmd, shell=True, executable="/bin/bash")
-        print(f"show_cov: NXV launched (pid={self._nxv_proc.pid}), plan at {plan_csv}")
-
-        # Schedule async reimport when NXV exits
-        loop = asyncio.get_event_loop()
-        loop.create_task(self._wait_for_nxv_and_reimport())
-
-    async def _wait_for_nxv_and_reimport(self) -> None:
-        """Wait for the NXV subprocess to exit, then reimport the edited CSV."""
-        loop = asyncio.get_event_loop()
-        # Wait in a thread so we don't block the event loop
-        await loop.run_in_executor(None, self._nxv_proc.wait)
-        print(f"show_cov: NXV exited (rc={self._nxv_proc.returncode})")
-
-        plan_csv = self._nxv_plan_csv
-        if os.path.isfile(plan_csv):
-            self.model.angleplan.import_from_nxv_csv(plan_csv)
-            self._push_angleplan()
-            print(f"show_cov: reimported {len(self.model.angleplan.angle_list)} rows from {plan_csv}")
-        else:
-            print(f"show_cov: CSV not found at {plan_csv}, skipping reimport")
+        self._angle_plan.show_coverage()
 
     def close_coverage(self) -> None:
-        _trace("hide_cov")
-        self.model.angleplan.is_showing_coverage = False
-        self._push_angleplan()
+        self._angle_plan.close_coverage()
 
-    ############################### coverage figure update ###########################################################
     def reset_run(self) -> None:
-        # if self.model.experimentinfo.c
-        self.optimize_angleplan()
-        _trace("reset_run")
-
-        self._push_angleplan()
-        _trace("reset_run after update view")
-
-        pass
+        self._angle_plan.reset_run()
 
     def optimize_angleplan(self) -> None:
-        from .angle_plan import angleplan_optimize
-
-        _trace("optimize_angleplan")
-        ##self.is_uninterruptable = True
-        ##self.update_view()
-        final_angle_list = angleplan_optimize(self)
-        ##self.is_uninterruptable = False
-        ##self.update_view()
-        # print('optimize done. final_angle_list',final_angle_list)
-
-        # Per-point-group fallback angle lists.
-        # Source data lives in techniques/single_crystal/fixtures/optimizer_fallback_angles.json
-        # so this hot path stays maintainable.
-        pg = self.model.experimentinfo.point_group
-        fallback = _load_optimizer_fallback_angles().get(pg)
-        if fallback is not None:
-            final_angle_list = [tuple(row) for row in fallback]
-
-        print(
-            "update angle_list",
-        )
-        self.model.angleplan.angle_list = []
-        for i in range(len(final_angle_list)):
-            r = {
-                "id": i + 1,
-                "title": "pg:" + self.model.experimentinfo.point_group + "_" + str(i + 1),
-                "comment": "resetted",
-                "phi": float(final_angle_list[i][0]),
-                "chi": float(final_angle_list[i][1]),
-                "omega": float(final_angle_list[i][2]),
-                "wait_for": "PCharge",
-                "value": 1,
-            }
-            self.model.angleplan.angle_list.append(r)
-
-        print("vm optimize done for angle_list", self.model.angleplan.angle_list)
+        self._angle_plan.optimize_angleplan()
