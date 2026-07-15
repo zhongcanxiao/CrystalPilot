@@ -1,9 +1,12 @@
 """View model for angle plan."""
 
+import logging
 from typing import List
 
 from ....core.beamline import active
 from .steering import SingleCrystalSteeringViewModel
+
+logger = logging.getLogger(__name__)
 
 # from ..models.ccs_status import CCSStatusModel
 # from ..models.temporal_analysis import TemporalAnalysisModel
@@ -113,9 +116,9 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     # from ap_test_v2 import DetectorPane, DetectorInstrument, QGrids
     # from ap_test_v2 import optimize_angle_with_fixed_given as oa
     # from ap_test_v2 import analyze_peaks
-    print("=========================================================================")
-    print("==========================angle plan test================================")
-    print("=========================================================================")
+    logger.debug("=========================================================================")
+    logger.debug("==========================angle plan test================================")
+    logger.debug("=========================================================================")
 
     instrument = active().mantid_instrument_name
     # wavelength = view_model.model.experimentinfo.wavelength
@@ -128,7 +131,7 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     point_group = view_model.model.experimentinfo.point_group
     # lattice_centering = view_model.model.experimentinfo.lattice_centering
 
-    print("self.instrument        ", instrument)
+    logger.debug("%s %s", "self.instrument        ", instrument)
     # print('self.wavelength        ',wavelength        )
     # print('self.axes              ',axes              )
     # print('self.limits            ',limits            )
@@ -136,14 +139,14 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     # print('self.d_min             ',d_min             )
     # print('self.d_max             ',d_max             )
     # print('self.offset            ',offset            )
-    print("self.point_group       ", point_group)
+    logger.debug("%s %s", "self.point_group       ", point_group)
     # print('self.lattice_centering ',lattice_centering )
 
     #####################
 
-    print("--------------------------peak input list--------------------------------")
+    logger.debug("--------------------------peak input list--------------------------------")
     # print('peaks',peaks)
-    print("--------------------------UB read--------------------------------")
+    logger.debug("--------------------------UB read--------------------------------")
     ub = np.array(
         [
             [-0.06196579, -0.0646735, 0.00629365],
@@ -159,14 +162,14 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     #                 [ 0.02816059, -0.01873959,  0.08169699]])
     # print('UB',UB)
 
-    print("--------------------------symmetry read--------------------------------")
+    logger.debug("--------------------------symmetry read--------------------------------")
     # laue='m-3'
     # print('Laue',laue)
     # symmetry = self.get_symmetry_transforms(laue)
     # print('symmtries:',symmetry)
 
-    print("--------------------------euler angle range--------------------------------")
-    print("--------------------------instrument setup--------------------------------")
+    logger.debug("--------------------------euler angle range--------------------------------")
+    logger.debug("--------------------------instrument setup--------------------------------")
     mtdapi.LoadEmptyInstrument(InstrumentName=instrument, OutputWorkspace="instrument")
 
     mtdapi.ExtractMonitors(InputWorkspace="instrument", DetectorWorkspace="instrument", MonitorWorkspace="montitors")
@@ -176,7 +179,7 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     l2 = np.array(mtd["detectors"].column(1)).reshape(-1, 256, 256)
     two_theta = np.array(mtd["detectors"].column(2)).reshape(-1, 256, 256)
     az_phi = np.array(mtd["detectors"].column(3)).reshape(-1, 256, 256)
-    print("L2", l2)
+    logger.debug("%s %s", "L2", l2)
 
     # TODO: get L1 in cm
     # L1 = np.array(mtd['detectors'].column(1)).reshape(-1, 256,256)
@@ -239,7 +242,7 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
         #  2---3
         ##################################################################################
 
-    print("-------------------------grids setup-----------------------------")
+    logger.debug("-------------------------grids setup-----------------------------")
     # Qmax=multi_detector_system.get_max_Q()
     # Qmin=multi_detector_system.get_min_Q()
     # Qmax=10
@@ -265,11 +268,11 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     # qhkl_irr=np.column_stack((qhkl_irr_h_flat,qhkl_irr_k_flat,qhkl_irr_l_flat)).T
     qhkl_irr = np.column_stack((qhkl_irr_h_flat, qhkl_irr_k_flat, qhkl_irr_l_flat))
 
-    print("qhkl_irr shape", qhkl_irr.shape)
+    logger.debug("%s %s", "qhkl_irr shape", qhkl_irr.shape)
 
     pg = PointGroupFactory.createPointGroup(point_group)
     so = pg.getSymmetryOperations()
-    print("symmetry operations:", so)
+    logger.debug("%s %s", "symmetry operations:", so)
     # qhkl_sym_list=[]
     qlab_sym_list = []
     a = np.array([1, 0, 0])
@@ -280,48 +283,48 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
         qhkl_sym = [sym.transformHKL(q) for q in qhkl_irr]
         qlab = np.array(qhkl_sym) @ (ub).T
         # qhkl_sym_list.append(qlab)
-        print("symmetry operation:", sym)
+        logger.debug("%s %s", "symmetry operation:", sym)
         qlab_sym_list.append(qlab)
         tsyma = sym.transformHKL(a)
         tsymb = sym.transformHKL(b)
         tsymc = sym.transformHKL(c)
         tsym = np.array([tsyma, tsymb, tsymc]).tolist()
-        print(tsyma, tsymb, tsymc)
-        print("symmetry operation:", tsym)
+        logger.debug("%s %s %s", tsyma, tsymb, tsymc)
+        logger.debug("%s %s", "symmetry operation:", tsym)
         symmetry_operations.append(tsym)
-        print("symmetry operation:", symmetry_operations)
+        logger.debug("%s %s", "symmetry operation:", symmetry_operations)
     view_model.model.angleplan.symmetry_operations = symmetry_operations
 
     # print('qhkl_sym_list length and shape',len(qhkl_sym_list),qhkl_sym_list[-1].shape)
-    print("qlab_sym_list length and shape", len(qlab_sym_list), qlab_sym_list[-1].shape)
+    logger.debug("%s %s %s", "qlab_sym_list length and shape", len(qlab_sym_list), qlab_sym_list[-1].shape)
 
     grid_parameter = {"num_sym": len(qlab_sym_list), "qlist": qlab_sym_list}
     # grid_parameter={'Nx':10,'Ny':10,'Nz':10,'Qmax':Qmax,'Qmin':Qmin}
     grids = QGrids(grid_mode="input", grid_parameter=grid_parameter)
     if grids.points:
-        print("grids shape", grids.points[0].shape)
+        logger.debug("%s %s", "grids shape", grids.points[0].shape)
 
-    print("-------------------------initial coverage calculation-----------------------------")
-    print("coverage calculation")
+    logger.debug("-------------------------initial coverage calculation-----------------------------")
+    logger.debug("coverage calculation")
 
     coverage_results = grids.get_coverage(multi_detector_system)
     # print(grids.mask.shape)
-    print("initial coverage", np.sum(coverage_results) * 100 / np.size(coverage_results), "%")
+    logger.debug("%s %s %s", "initial coverage", np.sum(coverage_results) * 100 / np.size(coverage_results), "%")
     # print(grids.points.shape)
     # print(grids.points[:100,:])
     # print('shape coverage',coverage_results.shape)
     # print(coverage_results[:100,:])
 
-    print("-------------------------analyze peak-----------------------------")
+    logger.debug("-------------------------analyze peak-----------------------------")
     # peaks_list=[peak for peak in peaks.values()]
     # analyze_peaks(peaks_list,UB,multi_detector_system,symmetry)
 
-    print("-------------------------ask for and set initial angles list-----------------------------")
-    print("            ---------------------not implemented---------------------------")
-    print("-------------------------optimize angle-----------------------------")
+    logger.debug("-------------------------ask for and set initial angles list-----------------------------")
+    logger.debug("            ---------------------not implemented---------------------------")
+    logger.debug("-------------------------optimize angle-----------------------------")
     # fixed_angle_list = np.array([[0, 135, 0]])
     fixed_angle_list = [[0, 135, 0]]
-    print("fixed_angle_list:", fixed_angle_list)
+    logger.debug("%s %s", "fixed_angle_list:", fixed_angle_list)
     # euler_angle_range = [[0, 360, 1], [135, 135, 1], [0, 360, 1]]
 
     ############################################### optimization #######################################
@@ -333,7 +336,7 @@ def angleplan_optimize(view_model: SingleCrystalSteeringViewModel) -> List:
     return []
 
     exit("debug")
-    print("------------------------- visualizie-----------------------------")
+    logger.debug("------------------------- visualizie-----------------------------")
     ## Define vertices
     # vertices = np.array([
     #    [0, 0, 0],

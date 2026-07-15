@@ -1,5 +1,7 @@
 """View module for angle plan."""
 
+import logging
+
 import numpy as np
 import plotly.graph_objects as go
 import trame
@@ -9,6 +11,8 @@ from trame.widgets import html, plotly
 from trame.widgets import vuetify3 as vuetify
 
 from ..view_models.steering import SingleCrystalSteeringViewModel
+
+logger = logging.getLogger(__name__)
 
 
 class AnglePlanView:
@@ -86,13 +90,13 @@ class AnglePlanView:
             # if book:
             #    state.record = book.copy()
             #    state.dialog = True
-            print("view id", run_id)
+            logger.debug("%s %s", "view id", run_id)
             self.view_model.edit_run(run_id)
 
         @trame_server.controller.trigger("remove_run")
         def remove_run(run_id: int) -> None:
             # state.books = [b for b in state.books if b["id"] != book_id]
-            print("view id", run_id)
+            logger.debug("%s %s", "view id", run_id)
             self.view_model.remove_run(run_id)
 
         @trame_server.controller.trigger("save_run")
@@ -280,9 +284,9 @@ class AnglePlanView:
         #    )
 
         # vuetify.VRow(v_for="header in model_angleplan.headers", v_text="header")
-        print("model_angleplan.angle_list")
-        print(self.view_model.model.angleplan.angle_list)
-        print(len(self.view_model.model.angleplan.angle_list))
+        logger.debug("model_angleplan.angle_list")
+        logger.debug(self.view_model.model.angleplan.angle_list)
+        logger.debug(len(self.view_model.model.angleplan.angle_list))
 
         # with vuetify.VRow( v_for="(angle, index) in model_angleplan.angle_list_pd",):
         #    InputField(v_model="model_angleplan.angle_list_pd[index].phi")
@@ -291,7 +295,7 @@ class AnglePlanView:
         @trame_server.controller.trigger("show_coverage")
         def show_coverage() -> None:
             # state.books = [b for b in state.books if b["id"] != book_id]
-            print("view id")
+            logger.debug("view id")
 
             self.fig_c = self.view_model.get_figure_coverage()
             self.figure_coverage.update(self.fig_c)
@@ -419,7 +423,7 @@ class AnglePlanView:
 
         @trame_server.controller.trigger("abort_job")
         def abort_job(scan_id: int) -> None:
-            print("abort_job scan_id", scan_id)
+            logger.debug("%s %s", "abort_job scan_id", scan_id)
             self.view_model.abort_job(scan_id)
 
         with VBoxLayout(classes="border-lg border-primary mb-1", stretch=True):

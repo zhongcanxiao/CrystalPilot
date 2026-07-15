@@ -1,9 +1,13 @@
 """Module for the System tab."""
 
+import logging
+
 from nova.trame.view.components import InputField, RemoteFileInput
 from nova.trame.view.layouts import GridLayout
 
 from ..view_models.steering import SingleCrystalSteeringViewModel
+
+logger = logging.getLogger(__name__)
 
 
 class ExperimentInfoView:
@@ -32,4 +36,4 @@ class ExperimentInfoView:
 
     def save_settings(self) -> None:
         # Placeholder function to handle saving settings
-        print("Settings saved")
+        logger.debug("Settings saved")

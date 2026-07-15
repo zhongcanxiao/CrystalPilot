@@ -8,12 +8,16 @@ Renders an inline right panel (not an overlay drawer) containing:
 
 from __future__ import annotations
 
+import logging
+
 from trame.widgets import client
 from trame.widgets import vuetify3 as vuetify
 from trame_client.widgets import html
 from trame_server import Server
 
 from ..view_models.chat import ChatViewModel
+
+logger = logging.getLogger(__name__)
 
 # ── CSS for chat bubbles (injected via trame client.Style) ─────────────
 _CHAT_RESIZE_JS = """
@@ -278,14 +282,14 @@ class ChatPaneView:
 
     async def _on_submit(self, text: str = "") -> None:
         """Trigger handler — trame awaits async trigger results automatically."""
-        print(f"[ChatPane] _on_submit called, text='{text}'")
+        logger.debug(f"[ChatPane] _on_submit called, text='{text}'")
         # Fallback: if the trigger arg arrived empty (state-sync race), read the
         # current value from the Python model (which the state.change callback
         # keeps in sync from v-model updates).
         if not text or not text.strip():
             text = self.chat_vm.chat_model.user_input
-            print(f"[ChatPane] fallback to model user_input='{text}'")
+            logger.debug(f"[ChatPane] fallback to model user_input='{text}'")
         if not text or not text.strip():
-            print("[ChatPane] text is empty, ignoring submit")
+            logger.debug("[ChatPane] text is empty, ignoring submit")
             return
         await self.chat_vm.handle_submit(text.strip())

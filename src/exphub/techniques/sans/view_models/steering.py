@@ -28,6 +28,7 @@ builder if one exists and otherwise reports that submission is not yet wired.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Callable, Dict, Optional
 
@@ -36,6 +37,8 @@ from pydantic import BaseModel, Field
 
 from ....core.beamline import active
 from ..models.root import SansMainModel
+
+logger = logging.getLogger(__name__)
 
 # Verbose tracing for ViewModel actions; off by default. Mirrors the
 # single-crystal steering VM's CRYSTALPILOT_DEBUG gate so SANS UI interactions
@@ -111,7 +114,7 @@ class SansSteeringViewModel:
     # ------------------------------------------------------------------ #
     def change_callback(self, results: Dict[str, Any]) -> None:
         if results["error"]:
-            print(f"error in fields {results['errored']}, model not changed")
+            logger.warning(f"error in fields {results['errored']}, model not changed")
         else:
             _trace("model fields updated:", results["updated"])
 
@@ -145,7 +148,7 @@ class SansSteeringViewModel:
         try:
             self.model.strategy.load_strategy(self.model.strategy.plan_file)
         except Exception as e:  # noqa: BLE001 — surface load errors to the user
-            print(f"Failed to load SANS strategy CSV: {e}")
+            logger.warning(f"Failed to load SANS strategy CSV: {e}")
             if self._notify is not None:
                 self._notify(f"Failed to load strategy CSV: {e}")
         self._push_strategy()
@@ -270,7 +273,7 @@ class SansSteeringViewModel:
         try:
             self.model.eiccontrol.poll_job_statuses(ipts_number, instrument_name)
         except Exception as e:  # noqa: BLE001
-            print(f"Error polling job statuses: {e}")
+            logger.warning(f"Error polling job statuses: {e}")
         self._push_eiccontrol()
 
     def abort_job(self, scan_id: int) -> None:

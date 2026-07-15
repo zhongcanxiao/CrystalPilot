@@ -137,12 +137,12 @@ class TabContentPanel:
         import os
 
         os.system("~/run-nxv.sh")
-        print("Open Data Visualization tab")
+        logger.debug("Open Data Visualization tab")
 
     def open_data_reduction(self) -> None:
         """Open the Data Reduction tab."""
-        print("Open Data Reduction tab")
+        logger.debug("Open Data Reduction tab")
 
     def open_data_refinement(self) -> None:
         """Open the Data Refinement tab."""
-        print("Open Data Refinement tab")
+        logger.debug("Open Data Refinement tab")

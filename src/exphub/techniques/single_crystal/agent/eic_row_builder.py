@@ -21,6 +21,7 @@ module-level functions remain as thin delegators for existing callers.
 from __future__ import annotations
 
 import csv
+import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
@@ -28,6 +29,8 @@ from typing import Any, Dict, List, Tuple
 from ....core.beamline import active as _active_beamline
 from ....core.paths import resolver_for as _resolver_for
 from ..models import gonio_pvs
+
+logger = logging.getLogger(__name__)
 
 
 class SingleCrystalEICRowBuilder:
@@ -57,9 +60,9 @@ class SingleCrystalEICRowBuilder:
 
         try:
             os.makedirs(destination_dir, exist_ok=True)
-            print(f"Ensured directory exists: {destination_dir}")
+            logger.debug(f"Ensured directory exists: {destination_dir}")
         except OSError as e:
-            print(f"Failed to create directory {destination_dir}: {e}")
+            logger.warning(f"Failed to create directory {destination_dir}: {e}")
             raise
 
         run_title_pv = _active_beamline().single_crystal.run_title_pv
@@ -99,7 +102,7 @@ class SingleCrystalEICRowBuilder:
                     row["Wait For"] = gonio_pvs.WAIT_FOR_PCHARGE_PV if wait_for == "PCharge" else wait_for
                     row["Value"] = angle.get("value", 10)
                 writer.writerow(row)
-        print(f"Copied experiment strategy to {destination_path}")
+        logger.debug(f"Copied experiment strategy to {destination_path}")
         return destination_path
 
     def build_jobs(

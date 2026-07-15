@@ -9,6 +9,7 @@ point the view-model invokes on every tick.
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Any, Dict, List, Optional
@@ -21,12 +22,14 @@ from .....core.paths import resolver_for
 from . import pipeline
 from ._debug import trace
 
+logger = logging.getLogger(__name__)
+
 
 class MantidWorkflow:
     """Live-data session: state buckets + per-cycle pipeline orchestration."""
 
     def __init__(self) -> None:
-        print("initializing mtd workflow")
+        logger.debug("initializing mtd workflow")
         # Pulled from MainModel by update_experiment_info().
         self.ipts: int = 0
         self.ub_failsafe: str = ""
@@ -129,7 +132,7 @@ class MantidWorkflow:
             for alg in AlgorithmManager.runningInstancesOf("MonitorLiveData"):
                 alg.cancel()
         except Exception as e:
-            print(f"StopLiveData warning: {e}")
+            logger.warning(f"StopLiveData warning: {e}")
 
     # ---------- UB + lattice readback ----------
 
@@ -141,7 +144,7 @@ class MantidWorkflow:
             ub = lattice.getUB()
             return [[float(ub[i][j]) for j in range(3)] for i in range(3)]
         except Exception as e:
-            print(f"get_latest_ub: could not read UB from {workspace_name}: {e}")
+            logger.debug(f"get_latest_ub: could not read UB from {workspace_name}: {e}")
             return None
 
     def get_latest_lattice(self, workspace_name: str = "live_predict_peaks_ws") -> Optional[Dict[str, float]]:
@@ -159,7 +162,7 @@ class MantidWorkflow:
                 "volume": float(lat.volume()),
             }
         except Exception as e:
-            print(f"get_latest_lattice: could not read lattice from {workspace_name}: {e}")
+            logger.debug(f"get_latest_lattice: could not read lattice from {workspace_name}: {e}")
             return None
 
     def save_latest_ub(self, workspace_name: str = "live_predict_peaks_ws") -> Optional[str]:
@@ -168,7 +171,7 @@ class MantidWorkflow:
             ws = mtdapi.mtd[workspace_name]
             ws.sample().getOrientedLattice()
         except Exception as e:
-            print(f"save_latest_ub: workspace '{workspace_name}' has no UB yet: {e}")
+            logger.debug(f"save_latest_ub: workspace '{workspace_name}' has no UB yet: {e}")
             return None
 
         resolver = resolver_for(self.ipts)
@@ -176,7 +179,7 @@ class MantidWorkflow:
         try:
             os.makedirs(save_dir, exist_ok=True)
         except Exception as e:
-            print(f"save_latest_ub: could not create {save_dir}: {e}")
+            logger.debug(f"save_latest_ub: could not create {save_dir}: {e}")
             return None
 
         timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -185,10 +188,10 @@ class MantidWorkflow:
         path = os.path.join(save_dir, filename)
         try:
             mtdapi.SaveIsawUB(InputWorkspace=workspace_name, Filename=path)
-            print(f"save_latest_ub: wrote {path}")
+            logger.debug(f"save_latest_ub: wrote {path}")
             return path
         except Exception as e:
-            print(f"save_latest_ub: SaveIsawUB failed for {path}: {e}")
+            logger.warning(f"save_latest_ub: SaveIsawUB failed for {path}: {e}")
             return None
 
     # ---------- experiment info & filenames ----------
@@ -205,7 +208,7 @@ class MantidWorkflow:
         self.min_d = models.experimentinfo.min_dspacing
         self.max_d = models.experimentinfo.max_dspacing
         self.calib_fname = models.experimentinfo.cal_filename
-        print("update experiment info")
+        logger.debug("update experiment info")
         if models.experimentinfo.UBFileName:
             self.ub_failsafe = models.experimentinfo.UBFileName
         self.output_path = resolver_for(self.ipts).autoreduce_dir + "/live_data/"
@@ -273,17 +276,17 @@ class MantidWorkflow:
                     "Another MonitorLiveData thread is already running for %s run %s. "
                     "Stop the existing live-update session before starting a new one."
                 ) % (instrument_name, str(conflict_current_run))
-                print("Warning:", msg)
+                logger.warning("%s %s", "Warning:", msg)
                 raise RuntimeError(msg) from e
             else:
-                print(f"Unexpected error occurred: {str(e)}")
+                logger.warning(f"Unexpected error occurred: {str(e)}")
                 raise
 
         if not mtdapi.mtd.doesExist("live_event_ws"):
             raise RuntimeError("Live data workspace 'live_event_ws' does not exist after StartLiveData.")
         self.initial_run = mtdapi.mtd["live_event_ws"].getRunNumber()
         self.initial_run_start_time = mtdapi.mtd["live_event_ws"].getRun().startTime().totalNanoseconds() * 1e-9
-        print(f"initial run: {self.initial_run}")
+        logger.debug(f"initial run: {self.initial_run}")
 
         self.current_run = self.initial_run
         self.current_run_start_time = self.initial_run_start_time
@@ -291,9 +294,9 @@ class MantidWorkflow:
 
     def live_data_reduction(self) -> None:
         """One cycle: checkpoint → load → refine → integrate → check."""
-        print("============================================================================================")
+        logger.debug("============================================================================================")
         trace("live data reduction started")
-        print("============================================================================================")
+        logger.debug("============================================================================================")
         pipeline.run_change_checkpoint(self)
         pipeline.load_config(self)
         pipeline.refine_ub(self)

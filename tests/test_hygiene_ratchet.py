@@ -31,7 +31,10 @@ TYPE_IGNORE_RE = re.compile("type:" + r"\s*" + "ignore")
 NOQA_RE = re.compile("#" + r"\s*" + "noqa")
 
 # Caps recorded after the mypy-to-zero pass (2026-06-03). Lower, never raise.
-PRINT_CAP = 341  # scanned dirs: src/
+# 151, not 0: the remainder is the vendored EIC client modules (eic_client.py,
+# auth.py), the two intentional print-gated trace helpers (tracing.py /
+# temporal_analysis/_debug.py), and commented-out prints the regex still counts.
+PRINT_CAP = 151  # scanned dirs: src/
 TYPE_IGNORE_CAP = 14  # scanned dirs: src/ tests/ scripts/
 # 34, not 31: the golden-path tests each carry one `import exphub.beamlines
 # # noqa: F401` — the codebase's blessed registration-side-effect idiom, not a

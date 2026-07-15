@@ -13,6 +13,7 @@ in based on the active prediction model and peak-selection mode. Optional
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, List, Optional, Sequence
 
@@ -22,6 +23,8 @@ import plotly.io as pio
 from sklearn.linear_model import LinearRegression
 
 from ._debug import trace
+
+logger = logging.getLogger(__name__)
 
 FIG_MARGIN = {"l": 50, "r": 15, "t": 35, "b": 40}
 GRID_KWARGS = {
@@ -104,12 +107,12 @@ def build_intensity_figure(
         yaxis = yaxis or default_yaxis
 
     if len(time_steps) > 0:
-        print("============================================================================================")
+        logger.debug("============================================================================================")
         trace("time_steps")
         trace(time_steps)
         trace("intensity_data")
         trace(intensity_data)
-        print("============================================================================================")
+        logger.debug("============================================================================================")
 
         x = np.array(time_steps).reshape(-1, 1) ** 0.5
         y = np.array(intensity_data)
@@ -210,12 +213,12 @@ def build_uncertainty_figure(
         y_range = (slope * (x_range**0.5) + intercept) ** -1
 
         fig.add_trace(go.Scatter(x=x_range, y=y_range, mode="lines", name="Fitted Line", line={"dash": "dash"}))
-        print("============================================================================================")
+        logger.debug("============================================================================================")
         trace("time_steps")
         trace(ts_arr)
         trace("uncertainty_data")
         trace(un_arr)
-        print("============================================================================================")
+        logger.debug("============================================================================================")
         fig.add_trace(go.Scatter(x=ts_arr, y=un_arr, mode="lines+markers", name="Uncertainty Data"))
         fig.update_layout(
             title={"text": title, "x": 0.5, "xanchor": "center"},
@@ -262,7 +265,7 @@ def save_figure_snapshot(
     try:
         os.makedirs(output_dir, exist_ok=True)
     except OSError as e:
-        print(f"save_figure_snapshot: could not create {output_dir}: {e}")
+        logger.debug(f"save_figure_snapshot: could not create {output_dir}: {e}")
         return written
 
     intensity_path = os.path.join(output_dir, f"{file_prefix}_intensity.html")
@@ -273,13 +276,13 @@ def save_figure_snapshot(
         pio.write_html(intensity_fig, file=intensity_path, include_plotlyjs="cdn", auto_open=False)
         written["intensity"] = intensity_path
     except Exception as e:
-        print(f"save_figure_snapshot: write_html(intensity) failed: {e}")
+        logger.warning(f"save_figure_snapshot: write_html(intensity) failed: {e}")
 
     try:
         pio.write_html(uncertainty_fig, file=uncertainty_path, include_plotlyjs="cdn", auto_open=False)
         written["uncertainty"] = uncertainty_path
     except Exception as e:
-        print(f"save_figure_snapshot: write_html(uncertainty) failed: {e}")
+        logger.warning(f"save_figure_snapshot: write_html(uncertainty) failed: {e}")
 
     try:
         n = len(measure_times)
@@ -303,6 +306,6 @@ def save_figure_snapshot(
             )
             written["data"] = data_path
     except Exception as e:
-        print(f"save_figure_snapshot: data CSV write failed: {e}")
+        logger.warning(f"save_figure_snapshot: data CSV write failed: {e}")
 
     return written

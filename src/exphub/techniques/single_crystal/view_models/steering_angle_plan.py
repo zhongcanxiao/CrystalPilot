@@ -11,6 +11,7 @@ the coverage-figure bind.
 
 import asyncio
 import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -21,6 +22,8 @@ from typing import TYPE_CHECKING, Any
 import plotly.graph_objects as go
 
 from .tracing import _trace
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .steering import SingleCrystalSteeringViewModel
@@ -111,7 +114,7 @@ class AnglePlanActions:
         2. Launch NXV via subprocess with --initialize-planner <UB> --open-plan <csv>.
         3. Spawn an async task that waits for NXV to exit, then reimports the CSV.
         """
-        print("show_cov: exporting plan and launching NeuXtalViz")
+        logger.debug("show_cov: exporting plan and launching NeuXtalViz")
 
         # Determine exchange CSV path (in the IPTS shared dir so NXV can also find it)
         plan_csv = os.path.join(tempfile.gettempdir(), "crystalpilot_nxv_plan.csv")
@@ -144,7 +147,7 @@ class AnglePlanActions:
         # Launch NXV as a subprocess and wait for it asynchronously
         self._nxv_plan_csv = plan_csv
         self._nxv_proc = subprocess.Popen(shell_cmd, shell=True, executable="/bin/bash")
-        print(f"show_cov: NXV launched (pid={self._nxv_proc.pid}), plan at {plan_csv}")
+        logger.debug(f"show_cov: NXV launched (pid={self._nxv_proc.pid}), plan at {plan_csv}")
 
         # Schedule async reimport when NXV exits
         loop = asyncio.get_event_loop()
@@ -155,15 +158,15 @@ class AnglePlanActions:
         loop = asyncio.get_event_loop()
         # Wait in a thread so we don't block the event loop
         await loop.run_in_executor(None, self._nxv_proc.wait)
-        print(f"show_cov: NXV exited (rc={self._nxv_proc.returncode})")
+        logger.debug(f"show_cov: NXV exited (rc={self._nxv_proc.returncode})")
 
         plan_csv = self._nxv_plan_csv
         if os.path.isfile(plan_csv):
             self._vm.model.angleplan.import_from_nxv_csv(plan_csv)
             self._vm._push_angleplan()
-            print(f"show_cov: reimported {len(self._vm.model.angleplan.angle_list)} rows from {plan_csv}")
+            logger.debug(f"show_cov: reimported {len(self._vm.model.angleplan.angle_list)} rows from {plan_csv}")
         else:
-            print(f"show_cov: CSV not found at {plan_csv}, skipping reimport")
+            logger.warning(f"show_cov: CSV not found at {plan_csv}, skipping reimport")
 
     def close_coverage(self) -> None:
         _trace("hide_cov")
@@ -193,7 +196,7 @@ class AnglePlanActions:
         if fallback is not None:
             final_angle_list = [tuple(row) for row in fallback]
 
-        print(
+        logger.debug(
             "update angle_list",
         )
         self._vm.model.angleplan.angle_list = []
@@ -210,4 +213,4 @@ class AnglePlanActions:
             }
             self._vm.model.angleplan.angle_list.append(r)
 
-        print("vm optimize done for angle_list", self._vm.model.angleplan.angle_list)
+        logger.debug("%s %s", "vm optimize done for angle_list", self._vm.model.angleplan.angle_list)

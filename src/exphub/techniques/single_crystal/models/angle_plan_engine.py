@@ -6,6 +6,9 @@ from itertools import product
 from typing import Any, Dict, List, Union
 
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 # units in code and input: length (cm), time(microsec), wavevector (A^-1)
 
@@ -520,7 +523,7 @@ def optimize_angle_with_fixed_given(grids: QGrids, det_ins: DetectorInstrument, 
         # new_angle=grid_search(det_ins, grids, euler_angle_ranges,current_coverage)
         new_angle = grid_ascend(det_ins, grids, euler_angle_ranges, current_coverage, angle_list[-1])
         if new_angle == None:
-            print("Max coverage reached, stopping")
+            logger.debug("Max coverage reached, stopping")
             break
 
         ########## nst angle rotation#############
@@ -537,18 +540,18 @@ def optimize_angle_with_fixed_given(grids: QGrids, det_ins: DetectorInstrument, 
 
         last_coverage = current_coverage.copy()
 
-        print(r"current coverage: f%\%", current_coverage_num * 100.0 / np.size(current_coverage))
+        logger.debug("%s %s", r"current coverage: f%\%", current_coverage_num * 100.0 / np.size(current_coverage))
         # print('where',np.where(current_coverage==True))
         # print('new_angle',new_angle)
         angle_list.append(new_angle)
-        print("angle", angle_list)
-    print("final covrage", np.sum(current_coverage))
-    print("final angle", angle_list)
+        logger.debug("%s %s", "angle", angle_list)
+    logger.debug("%s %s", "final covrage", np.sum(current_coverage))
+    logger.debug("%s %s", "final angle", angle_list)
     return angle_list, current_coverage
 
 
 def grid_search(det_ins, qgrids, euler_angle_ranges, last_coverage):
-    print("searching for new angle")
+    logger.debug("searching for new angle")
     # Define ranges for each Euler angle
     # euler_angle_range=[[0,180,0.5],[135,135,0.5],[0,360,0.5]]
     # print(euler_angle_ranges)
@@ -592,7 +595,7 @@ def grid_search(det_ins, qgrids, euler_angle_ranges, last_coverage):
 def grid_search_adaptive_fromlast(
     det_ins, qgrids, euler_angle_ranges, last_coverage, last_newcoverage, last_angle_idx, angle_combinations
 ):
-    print("searching for new angle")
+    logger.debug("searching for new angle")
     # Define ranges for each Euler angle
     # euler_angle_range=[[0,180,0.5],[135,135,0.5],[0,360,0.5]]
     # print(euler_angle_ranges)
@@ -636,7 +639,7 @@ def grid_search_adaptive_fromlast(
 
 ## 100% speed improvement
 def grid_search_adaptive(det_ins, qgrids, euler_angle_ranges, last_coverage, last_newcoverage):
-    print("searching for new angle")
+    logger.debug("searching for new angle")
     # Define ranges for each Euler angle
     # euler_angle_range=[[0,180,0.5],[135,135,0.5],[0,360,0.5]]
     # print(euler_angle_ranges)
@@ -748,7 +751,7 @@ def grid_ascend(det_ins, qgrids, euler_angle_ranges, last_coverage, last_angles)
         # return x, y, function_on_grid(x, y), path
         return x, y, z
 
-    print("gradient searching for new angle")
+    logger.debug("gradient searching for new angle")
     start_x, start_y, start_z = last_angles
     best_angles = gradient_ascent(start_x, start_y, start_z, learning_rate=0.5, max_steps=10, tolerance=1e-6)
     ascend_step = 0
@@ -801,8 +804,8 @@ def analyze_peaks(peaks, ub, det_ins, symmetry):
         edge_dist = {}
         resolution_list = {}
         angle_list = {}
-        print("metric for peak", peak_hkl)
-        print("-------------------------------")
+        logger.debug("%s %s", "metric for peak", peak_hkl)
+        logger.debug("-------------------------------")
 
         for detector_pane in det_ins.detector_panes:
             R = rotation_matrix_from_vectors(peak_qlab, detector_pane.center_axis)
@@ -812,7 +815,8 @@ def analyze_peaks(peaks, ub, det_ins, symmetry):
             edge_dist[current_pane_id] = detector_pane.cloest_face_dist(rotated_peak_qlab)
             resolution_list[current_pane_id] = detector_pane.resolution(rotated_peak_qlab)
             angle_list[current_pane_id] = rotation_matrix_to_euler_yzy(R)
-            print(
+            logger.debug(
+                "%s %s %s %s",
                 "edge distance, resolution, angle",
                 edge_dist[current_pane_id],
                 resolution_list[current_pane_id],
@@ -1114,31 +1118,31 @@ def main():
     ]
     multi_detector_system = DetectorInstrument(det_ins_parameter)
     multi_detector_system.initialize_detector()
-    print("multi_Detector_info")
-    print(multi_detector_system.detector_panes)
-    print(multi_detector_system.detector_parameters_list)
-    print(multi_detector_system.detector_panes[0].qvertices)
-    print(multi_detector_system.detector_panes[0].qfaces)
+    logger.debug("multi_Detector_info")
+    logger.debug(multi_detector_system.detector_panes)
+    logger.debug(multi_detector_system.detector_parameters_list)
+    logger.debug(multi_detector_system.detector_panes[0].qvertices)
+    logger.debug(multi_detector_system.detector_panes[0].qfaces)
     euler_angle0 = [0, 0, 0]
     multi_detector_system.rotate_detectors(euler_angles=euler_angle0)
 
     grid_parameter0 = {"Nx": 10, "Ny": 10, "Nz": 10, "Qmax": 10, "Qmin": 0.1}
     grid_parameter0 = {"Nx": 20, "Ny": 20, "Nz": 4, "Qmax": 1, "Qmin": 0e-3}
     grids1 = QGrids(grid_mode="uniform", grid_parameter=grid_parameter0)
-    print("coverage calculation")
+    logger.debug("coverage calculation")
     coverage_results = grids1.get_coverage(multi_detector_system)
-    print("grids info")
-    print(coverage_results)
-    print(grids1.points.shape)
-    print(grids1.points)
-    print(coverage_results.shape)
-    print(grids1.mask.shape)
+    logger.debug("grids info")
+    logger.debug(coverage_results)
+    logger.debug(grids1.points.shape)
+    logger.debug(grids1.points)
+    logger.debug(coverage_results.shape)
+    logger.debug(grids1.mask.shape)
     # Initialize coverage analyzer
 
     peak1 = np.array([2, 1, 10])
     ub1 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]) * 1e-2
 
-    print("analyze_peak info")
+    logger.debug("analyze_peak info")
     analyze_peaks([peak1], ub1, multi_detector_system)
 
     init_angle_list = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -1149,12 +1153,12 @@ def main():
     euler_angle_range1 = [[0, 360, 1], [135, 135, 0], [0, 360, 1]]
     fixed_angle_list = np.array([[0, 135, 0]])
     # Generate sample Q-points
-    print("optimize")
+    logger.debug("optimize")
 
     optimize_angle_with_fixed_given(grids1, multi_detector_system, fixed_angle_list, euler_angle_range1)
 
     # Analyze coverage
-    print("Detector Coverage Results:", coverage_results)
+    logger.debug("%s %s", "Detector Coverage Results:", coverage_results)
 
 
 if __name__ == "__main__":

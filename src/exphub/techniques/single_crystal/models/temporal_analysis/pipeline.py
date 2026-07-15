@@ -17,6 +17,7 @@ Phases run in strict order:
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,8 @@ import numpy as np
 
 from ._debug import trace
 from .selectors import make_selector
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .workflow import MantidWorkflow
@@ -86,7 +89,7 @@ def load_config(wf: "MantidWorkflow") -> None:
     trace("int filterbytime")
     trace("=" * 60)
     monitor_count = integrated_monitor_ws.dataY(0)[0]
-    print("\n", wf.current_run, " has integrated monitor count", monitor_count, "\n")
+    logger.debug("%s %s %s %s %s", "\n", wf.current_run, " has integrated monitor count", monitor_count, "\n")
 
     mtdapi.SetGoniometer(Workspace="live_event_ws", Goniometers="Universal")
     trace("getgonio filterbytime")
@@ -135,12 +138,12 @@ def refine_ub(wf: "MantidWorkflow") -> None:
             Iterations=100,
         )
     except ValueError as ub_error:
-        print("Warning: FindUBUsingFFT error - Four or more indexed peaks needed to find UB")
-        print("Error message: ", ub_error)
+        logger.warning("Warning: FindUBUsingFFT error - Four or more indexed peaks needed to find UB")
+        logger.warning("%s %s", "Error message: ", ub_error)
         wf.current_run_end_time = mtdapi.mtd["live_event_ws"].getRun().endTime().totalNanoseconds() * 1e-9
         wf.measure_time = wf.current_run_end_time - wf.initial_run_start_time
         if wf.measure_time > 100000:
-            print("Please check if neutron beam is on, or if the crystal is diffracting.")
+            logger.debug("Please check if neutron beam is on, or if the crystal is diffracting.")
     trace("6 filterbytime")
     trace("=" * 60)
 
@@ -208,7 +211,9 @@ def integrate_and_predict(wf: "MantidWorkflow") -> None:
     )
 
     wf.proton_charge = mtdapi.mtd["live_event_ws"].getRun().getProtonCharge() * 0.0036
-    print("\n", wf.current_run, " has integrated proton charge x 0.0036 of", wf.proton_charge, "C \n")
+    logger.debug(
+        "%s %s %s %s %s", "\n", wf.current_run, " has integrated proton charge x 0.0036 of", wf.proton_charge, "C \n"
+    )
 
     wf.current_run_end_time = mtdapi.mtd["live_event_ws"].getRun().endTime().totalNanoseconds() * 1e-9
     wf.measure_time = wf.current_run_end_time - wf.current_run_start_time
@@ -273,7 +278,9 @@ def check_peaks(wf: "MantidWorkflow") -> None:
             wf.sig10 = wf.sig10 + 1
 
     if wf.maxpeak_idx > -1 and wf.maxpeak_idx != np.argmax(int_ilist):
-        print("Warning: Max peak index has changed from ", wf.maxpeak_idx, " to ", np.argmax(int_ilist))
+        logger.warning(
+            "%s %s %s %s", "Warning: Max peak index has changed from ", wf.maxpeak_idx, " to ", np.argmax(int_ilist)
+        )
         wf.maxpeak_idx = int(np.argmax(int_ilist))
 
     if wf.maxpeak_idx == -1:
@@ -293,14 +300,14 @@ def check_peaks(wf: "MantidWorkflow") -> None:
     statistics = statistics_table.row(0)
 
     first_peak = sorted_ws.getPeak(0)
-    print("HKL of first peak in table {} {} {}".format(first_peak.getH(), first_peak.getK(), first_peak.getL()))
-    print("Multiplicity = %.2f" % statistics["Multiplicity"])
-    print("Resolution Min = %.2f" % statistics["Resolution Min"])
-    print("Resolution Max = %.2f" % statistics["Resolution Max"])
-    print("No. of Unique Reflections = %i" % statistics["No. of Unique Reflections"])
-    print("Mean ((I)/sd(I)) = %.2f" % statistics["Mean ((I)/sd(I))"])
-    print("Rmerge = %.2f" % statistics["Rmerge"])
-    print("Rpim = %.2f" % statistics["Rpim"])
+    logger.debug("HKL of first peak in table {} {} {}".format(first_peak.getH(), first_peak.getK(), first_peak.getL()))
+    logger.debug("Multiplicity = %.2f" % statistics["Multiplicity"])
+    logger.debug("Resolution Min = %.2f" % statistics["Resolution Min"])
+    logger.debug("Resolution Max = %.2f" % statistics["Resolution Max"])
+    logger.debug("No. of Unique Reflections = %i" % statistics["No. of Unique Reflections"])
+    logger.debug("Mean ((I)/sd(I)) = %.2f" % statistics["Mean ((I)/sd(I))"])
+    logger.debug("Rmerge = %.2f" % statistics["Rmerge"])
+    logger.debug("Rpim = %.2f" % statistics["Rpim"])
 
     mtdapi.SaveIsawPeaks(Inputworkspace="live_predict_peaks_ws", Filename=wf.output_path + wf.live_peaks_fname)
     mtdapi.SaveIsawUB(Inputworkspace="live_predict_peaks_ws", Filename=wf.output_path + wf.live_peaks_ub_fname)
@@ -345,7 +352,7 @@ def check_peaks(wf: "MantidWorkflow") -> None:
         wf.skip_reason = f"No selector registered for mode '{wf.selection}'"
 
     if not wf.skip_this_cycle:
-        print("Rsig = %.2f" % wf.Rsig)
+        logger.debug("Rsig = %.2f" % wf.Rsig)
     if (
         not wf.skip_this_cycle
         and getattr(wf, "intensity_ratio", None) is not None
@@ -357,13 +364,13 @@ def check_peaks(wf: "MantidWorkflow") -> None:
         wf.rsigs.append(wf.Rsig)
         wf.measure_times.append(wf.measure_time)
     else:
-        print("Skipping entry due to missing data or placeholder mode.")
+        logger.warning("Skipping entry due to missing data or placeholder mode.")
     wf.sig2s.append(wf.sig2)
     wf.sig3s.append(wf.sig3)
     wf.sig5s.append(wf.sig5)
     wf.sig10s.append(wf.sig10)
-    print("measure_times, proton_charges, intensity_ratios, rsigs")
-    print(wf.measure_times, wf.proton_charges, wf.intensity_ratios, wf.rsigs)
+    logger.debug("measure_times, proton_charges, intensity_ratios, rsigs")
+    logger.debug("%s %s %s %s", wf.measure_times, wf.proton_charges, wf.intensity_ratios, wf.rsigs)
     results = np.column_stack((wf.measure_times, wf.proton_charges, wf.intensity_ratios, wf.rsigs))
     np.savetxt(
         wf.output_path + "live_data_%s_results.csv" % (str(wf.current_run)),

@@ -1,5 +1,6 @@
 """Module for the Temporal Analysis tab."""
 
+import logging
 import time
 from typing import List, Tuple
 
@@ -12,6 +13,8 @@ from trame.widgets import vuetify3 as vuetify
 
 from ....core.beamline import active as _active_beamline
 from ..view_models.steering import SingleCrystalSteeringViewModel
+
+logger = logging.getLogger(__name__)
 
 # Plotly layout shared across the live-data plots in this view.
 _FIG_MARGIN = {"l": 50, "r": 15, "t": 35, "b": 40}
@@ -431,9 +434,9 @@ class TemporalAnalysisView:
             # so keep it guarded to avoid feedback loops
             self.figure_intensity.state.flush()
             self._last_intensity_time = now
-            print("============================================================================================")
-            print("update_figure_intensity")
-            print("============================================================================================")
+            logger.debug("============================================================================================")
+            logger.debug("update_figure_intensity")
+            logger.debug("============================================================================================")
         finally:
             self._updating_intensity = False
         # print("Currently plotted data:", self.figure_intensity.data)
@@ -461,9 +464,9 @@ class TemporalAnalysisView:
             # flush view state; keep guarded to avoid feedback loops
             self.figure_uncertainty.state.flush()
             self._last_uncertainty_time = now
-            print("============================================================================================")
-            print("update_figure_uncertainty")
-            print("============================================================================================")
+            logger.debug("============================================================================================")
+            logger.debug("update_figure_uncertainty")
+            logger.debug("============================================================================================")
         finally:
             self._updating_uncertainty = False
         # print("Currently plotted data:", self.figure.data)

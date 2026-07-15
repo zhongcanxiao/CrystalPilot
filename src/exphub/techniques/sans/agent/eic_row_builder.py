@@ -21,12 +21,15 @@ multi-row table scan.
 from __future__ import annotations
 
 import csv
+import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 
 from ....core.paths import resolver_for as _resolver_for
 from ..models.strategy import GROUP_KEY
+
+logger = logging.getLogger(__name__)
 
 
 def _headers_of(strategy_rows: List[Dict]) -> List[str]:
@@ -84,9 +87,9 @@ class SansEICRowBuilder:
 
         try:
             os.makedirs(destination_dir, exist_ok=True)
-            print(f"Ensured directory exists: {destination_dir}")
+            logger.debug(f"Ensured directory exists: {destination_dir}")
         except OSError as e:
-            print(f"Failed to create directory {destination_dir}: {e}")
+            logger.warning(f"Failed to create directory {destination_dir}: {e}")
             raise
 
         fieldnames = _headers_of(strategy_rows)
@@ -95,7 +98,7 @@ class SansEICRowBuilder:
             writer.writeheader()
             for row in strategy_rows:
                 writer.writerow({k: row.get(k, "") for k in fieldnames})
-        print(f"Copied SANS strategy to {destination_path}")
+        logger.debug(f"Copied SANS strategy to {destination_path}")
         return destination_path
 
     def build_rows(

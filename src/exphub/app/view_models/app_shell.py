@@ -12,11 +12,14 @@ refactor (P2.16).
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 from nova.mvvm.interface import BindingInterface
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ...core.beamline import TabKey
@@ -134,7 +137,7 @@ class AppShellViewModel:
     def on_view_state_change(self, results: Dict[str, Any]) -> None:
         """Detect user-driven changes to the shell view-state (beamline selector)."""
         if results.get("error"):
-            print(f"view_state error in {results.get('errored')}")
+            logger.warning(f"view_state error in {results.get('errored')}")
             return
         if self.view_state.beamline_id != self._last_beamline_id:
             new_id = self.view_state.beamline_id
@@ -180,7 +183,7 @@ class AppShellViewModel:
         try:
             target = get(beamline_id)
         except KeyError as e:
-            print(f"switch_beamline: {e}")
+            logger.debug(f"switch_beamline: {e}")
             return
 
         # Refuse cross-technique switches: no-op + snackbar, and roll the
@@ -205,7 +208,7 @@ class AppShellViewModel:
             try:
                 self._deactivate_hook()
             except Exception as e:
-                print(f"switch_beamline: deactivate hook failed: {e}")
+                logger.warning(f"switch_beamline: deactivate hook failed: {e}")
 
         spec = set_active(beamline_id)
         # Keep our cached id aligned so the next change_callback doesn't loop.

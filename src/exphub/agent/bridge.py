@@ -168,18 +168,18 @@ def apply_agent_config(
                 setattr(sub, field_name, new_val)
                 updated.append(field_name)
                 dirty = True
-                print(f"[Bridge] SET {attr_name}.{field_name} = {new_val!r} (was {old_val!r})")
+                logger.debug(f"[Bridge] SET {attr_name}.{field_name} = {new_val!r} (was {old_val!r})")
             except Exception as exc:
                 errors[field_name] = str(exc)
-                print(f"[Bridge] FAIL {attr_name}.{field_name}: {exc}")
+                logger.warning(f"[Bridge] FAIL {attr_name}.{field_name}: {exc}")
                 logger.warning("bridge: failed to set %s.%s: %s", attr_name, field_name, exc)
 
         if dirty and bind is not None:
             try:
                 bind.update_in_view(sub)
-                print(f"[Bridge] Pushed {attr_name} to view")
+                logger.debug(f"[Bridge] Pushed {attr_name} to view")
             except Exception as exc:
-                print(f"[Bridge] PUSH FAILED {attr_name}: {exc}")
+                logger.warning(f"[Bridge] PUSH FAILED {attr_name}: {exc}")
                 logger.warning("bridge: failed to push %s to view: %s", attr_name, exc)
 
     return updated, errors

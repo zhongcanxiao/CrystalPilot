@@ -130,7 +130,7 @@ class ChatViewModel:
         if not user_text.strip():
             return
 
-        print(f"[CrystalPilot Agent] User: {user_text[:120]}")
+        logger.debug(f"[CrystalPilot Agent] User: {user_text[:120]}")
         self.chat_model.messages.append({"role": "user", "content": user_text})
         self.chat_model.user_input = ""
         self.chat_model.is_thinking = True
@@ -155,7 +155,7 @@ class ChatViewModel:
                 confirmation_gate=self._confirmation_gate,
             )
             if handler_reply is not None:
-                print(f"[CrystalPilot Agent] Handler shortcut: {handler_reply[:80]}")
+                logger.debug(f"[CrystalPilot Agent] Handler shortcut: {handler_reply[:80]}")
                 self.chat_model.messages.append(
                     {"role": "assistant", "content": handler_reply, "html": md_to_html(handler_reply)}
                 )
@@ -170,7 +170,7 @@ class ChatViewModel:
 
             self.chat_model.agent_status = "Calling LLM…"
             self._push_chat()
-            print("[CrystalPilot Agent] Calling LLM (run_in_executor)…")
+            logger.debug("[CrystalPilot Agent] Calling LLM (run_in_executor)…")
 
             # Offload the blocking LLM call to a thread-pool executor so the
             # asyncio event loop (and the Trame/Vue UI) stays responsive.
@@ -185,19 +185,19 @@ class ChatViewModel:
                 ),
             )
 
-            print(f"[CrystalPilot Agent] Reply: {reply[:120]}")
+            logger.debug(f"[CrystalPilot Agent] Reply: {reply[:120]}")
             # Compare-and-swap: only write fields that the agent actually
             # changed relative to the snapshot taken at the start of the
             # turn. This prevents overwriting user edits made in the UI
             # while the agent was processing.
             diff_config = {k: v for k, v in new_config.items() if v != current_state.get(k)}
-            print(f"[CrystalPilot Agent] Config diff keys: {set(diff_config) or '(none)'}")
+            logger.debug(f"[CrystalPilot Agent] Config diff keys: {set(diff_config) or '(none)'}")
             self.chat_model.agent_status = "Applying configuration…"
             self._push_chat()
 
             changed, errors = apply_agent_config(diff_config, self.main_model, self.main_bindings)
             if changed:
-                print(f"[CrystalPilot Agent] Updated fields: {changed}")
+                logger.debug(f"[CrystalPilot Agent] Updated fields: {changed}")
                 logger.info("Agent updated fields: %s", changed)
                 schema_props = self._agent.schema_properties
                 pretty_fields = [pretty_name(f, schema_props) for f in changed]
@@ -216,7 +216,7 @@ class ChatViewModel:
             self.chat_model.messages.append({"role": "assistant", "content": reply, "html": md_to_html(reply)})
 
         except Exception as exc:
-            print(f"[CrystalPilot Agent] Error: {exc}")
+            logger.warning(f"[CrystalPilot Agent] Error: {exc}")
             logger.exception("Agent error")
             self._pending_bridge_errors = {}
             err_msg = f"Error: {exc}"

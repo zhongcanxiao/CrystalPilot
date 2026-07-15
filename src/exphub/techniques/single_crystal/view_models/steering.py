@@ -11,6 +11,7 @@ Moved out of ``app/view_models/main.py`` and renamed ``MainViewModel`` →
 """
 
 import asyncio
+import logging
 import time
 from typing import Any, Callable, Dict, Optional
 
@@ -22,6 +23,8 @@ from ..models.root import SingleCrystalMainModel
 from .steering_angle_plan import AnglePlanActions
 from .steering_eic import EicActions
 from .tracing import _trace
+
+logger = logging.getLogger(__name__)
 
 
 class SingleCrystalSteeringViewState(BaseModel):
@@ -65,7 +68,7 @@ class SingleCrystalSteeringViewModel:
             if hasattr(self.model, "temporalanalysis") and hasattr(self.model.temporalanalysis, "set_parent"):
                 self.model.temporalanalysis.set_parent(self.model)
         except Exception as e:
-            print("Warning: failed to set parent for temporalanalysis:", e)
+            logger.warning("%s %s", "Warning: failed to set parent for temporalanalysis:", e)
         # self.angleplan = AnglePlanModel()
 
         # here we create a bind that connects ViewModel with View. It returns a communicator object,
@@ -144,14 +147,14 @@ class SingleCrystalSteeringViewModel:
         _trace("update_experimentinfo_options")
 
         if results["error"]:
-            print(f"error in fields {results['errored']}, model not changed")
+            logger.warning(f"error in fields {results['errored']}, model not changed")
         else:
             _trace("model fields updated:", results["updated"])
         # time.sleep(7)
 
     def change_callback(self, results: Dict[str, Any]) -> None:
         if results["error"]:
-            print(f"error in fields {results['errored']}, model not changed")
+            logger.warning(f"error in fields {results['errored']}, model not changed")
         else:
             _trace("model fields updated:", results["updated"])
 
@@ -165,7 +168,7 @@ class SingleCrystalSteeringViewModel:
         try:
             self.model.temporalanalysis.clear_plot_buffers()
         except Exception as e:
-            print(f"clear_plot_buffers failed: {e}")
+            logger.warning(f"clear_plot_buffers failed: {e}")
         if self.view_state.is_live_update_running:
             self.stop_live_update()
             if self._notify is not None:
@@ -184,7 +187,7 @@ class SingleCrystalSteeringViewModel:
         buffers on user commit, not on every keystroke.
         """
         if results.get("error"):
-            print(f"temporalanalysis error in {results.get('errored')}")
+            logger.warning(f"temporalanalysis error in {results.get('errored')}")
             return
         new_sel = self.model.temporalanalysis.data_selection
         if new_sel != self._last_data_selection:
@@ -320,7 +323,7 @@ class SingleCrystalSteeringViewModel:
 
     def create_auto_update_temporalanalysis_figure(self) -> None:
         if self._live_update_task is not None and not self._live_update_task.done():
-            print("Live update already running — ignoring duplicate start request.")
+            logger.debug("Live update already running — ignoring duplicate start request.")
             return
         self._live_update_task = asyncio.create_task(self._start_and_run_live_update())
 
@@ -333,7 +336,7 @@ class SingleCrystalSteeringViewModel:
         try:
             await loop.run_in_executor(None, self.model.temporalanalysis.start_reading_live_mtd_data)
         except RuntimeError as e:
-            print(f"Failed to start live data: {e}")
+            logger.warning(f"Failed to start live data: {e}")
             self._live_update_task = None
             return
         self.view_state.is_live_update_running = True
@@ -356,13 +359,13 @@ class SingleCrystalSteeringViewModel:
         try:
             self.stop_live_update()
         except Exception as e:
-            print(f"on_deactivate: stop_live_update failed: {e}")
+            logger.warning(f"on_deactivate: stop_live_update failed: {e}")
         # 2. Drop the buffered temporal time-series so stale data from the old
         #    beamline doesn't bleed into the next one's plots.
         try:
             self.model.temporalanalysis.clear_plot_buffers()
         except Exception as e:
-            print(f"on_deactivate: clear_plot_buffers failed: {e}")
+            logger.warning(f"on_deactivate: clear_plot_buffers failed: {e}")
         # 3. Best-effort: reset the cached selection mode so the next
         #    user-driven change is detected correctly.
         try:
@@ -382,7 +385,7 @@ class SingleCrystalSteeringViewModel:
     async def get_live_mtd_data(self) -> None:
         loop = asyncio.get_event_loop()
         while True:
-            print("============================================================================================")
+            logger.debug("============================================================================================")
             _trace("get_live_mtd_data")
             try:
                 # The loop only runs after the workflow has been initialized.
@@ -395,12 +398,14 @@ class SingleCrystalSteeringViewModel:
                 # so the event loop (and GUI) stays responsive during the reduction.
                 await loop.run_in_executor(None, wf.live_data_reduction)
                 _trace("get_live_mtd_data done")
-                print("============================================================================================")
+                logger.debug(
+                    "============================================================================================"
+                )
                 # Pull the latest UB out of the workflow so the side-table in the view refreshes.
                 try:
                     self.model.temporalanalysis.sync_latest_ub_from_workflow()
                 except Exception as e:
-                    print(f"sync_latest_ub_from_workflow failed: {e}")
+                    logger.warning(f"sync_latest_ub_from_workflow failed: {e}")
                 await self._update_figures_async(loop)
                 _trace("=== update temporal done ===")
                 # Persist the latest figures + their data alongside the UB
@@ -409,23 +414,23 @@ class SingleCrystalSteeringViewModel:
                 try:
                     await loop.run_in_executor(None, self.model.temporalanalysis.save_latest_figure_snapshot)
                 except Exception as e:
-                    print(f"save_latest_figure_snapshot failed: {e}")
+                    logger.warning(f"save_latest_figure_snapshot failed: {e}")
                 if (
                     self.model.eiccontrol.eic_auto_stop_strategy == "By Uncertainty"
                     and len(wf.temporal_poisson_uncertainty) > 0
                 ):
                     if wf.temporal_poisson_uncertainty[-1] < self.model.eiccontrol.eic_auto_stop_uncertainty_threshold:
-                        print("stop_run")
+                        logger.debug("stop_run")
                         self.stoprun()
                         wf.temporal_poisson_uncertainty = []
                         wf.timeseries_data_plt = []
 
                         continue
             except asyncio.CancelledError:
-                print("Live update loop cancelled.")
+                logger.debug("Live update loop cancelled.")
                 break
             except Exception as e:
-                print(e)
+                logger.debug(e)
             # self.update_temporalanalysis_figure()
             await asyncio.sleep(40)
         self.view_state.is_live_update_running = False

@@ -1,6 +1,7 @@
 """Model for angle plan."""
 
 import csv
+import logging
 from typing import Any, Dict, List, Literal, Optional
 
 import numpy as np
@@ -9,6 +10,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from ....core.beamline import active as _active_beamline
 from . import gonio_pvs
+
+logger = logging.getLogger(__name__)
 
 
 def _default_instrument_name() -> str:
@@ -303,7 +306,7 @@ class AnglePlanModel(BaseModel):
 
     # @field_validator("angle_list", mode="before")
     def load_ap(self, file_path: str) -> None:
-        print("load_ap")
+        logger.debug("load_ap")
         with open(file_path, mode="r") as apfile:
             reader = csv.DictReader(apfile)
             self.angle_list_read = list(reader)
@@ -474,7 +477,7 @@ class AnglePlanModel(BaseModel):
                     row["Wait For"] = gonio_pvs.WAIT_FOR_PCHARGE_PV if wait_for == "PCharge" else wait_for
                     row["Value"] = angle.get("value", 10)
                 writer.writerow(row)
-        print(f"Exported {len(self.angle_list)} rows to {file_path}")
+        logger.debug(f"Exported {len(self.angle_list)} rows to {file_path}")
         return file_path
 
     def import_from_nxv_csv(self, file_path: str) -> None:
@@ -488,7 +491,7 @@ class AnglePlanModel(BaseModel):
             reader = csv.DictReader(f)
             rows = list(reader)
         if not rows:
-            print(f"import_from_nxv_csv: empty CSV at {file_path}")
+            logger.debug(f"import_from_nxv_csv: empty CSV at {file_path}")
             return
 
         all_cols = list(rows[0].keys())
@@ -550,7 +553,7 @@ class AnglePlanModel(BaseModel):
                 }
             )
         self.angle_list = new_angle_list
-        print(f"Imported {len(new_angle_list)} rows from {file_path}")
+        logger.debug(f"Imported {len(new_angle_list)} rows from {file_path}")
 
     def submit_to_eic(self) -> None:
         # Implement the submit logic here
@@ -753,8 +756,8 @@ class AnglePlanModel(BaseModel):
                     newpt = np.dot(r, qpt).tolist()  # Convert numpy array to list
                     newf.append(newpt)
                 all_faces.append(newf)
-        print("all_faces")
-        print(len(all_faces))
+        logger.debug("all_faces")
+        logger.debug(len(all_faces))
 
         def get_face_plot(face: Any) -> go.Mesh3d:
             px = [face[0][0], face[1][0], face[2][0], face[3][0]]
@@ -781,14 +784,14 @@ class AnglePlanModel(BaseModel):
     def get_coverage_figure_with_symmetry(
         self,
     ) -> go.Figure:
-        print("update_coverage_figure_with_symmetry")
+        logger.debug("update_coverage_figure_with_symmetry")
         qcones = self.qpane_cones.copy()
         faces: List[Any] = []
         for pane in qcones:  # x24 cone iters
             faces = faces + pane["qfaces"]  # 6 faces iters
 
         all_faces = []
-        print("symmetry_operations")
+        logger.debug("symmetry_operations")
         # print(self.symmetry_operations)
         for f in faces:
             for angle in self.angle_list:
@@ -802,8 +805,8 @@ class AnglePlanModel(BaseModel):
                         newpt = np.dot(symop, np.dot(r, qpt)).tolist()  # Convert numpy array to list
                         newf.append(newpt)
                     all_faces.append(newf)
-        print("all_faces")
-        print(len(all_faces))
+        logger.debug("all_faces")
+        logger.debug(len(all_faces))
 
         def get_face_plot(face: Any) -> go.Mesh3d:
             px = [face[0][0], face[1][0], face[2][0], face[3][0]]

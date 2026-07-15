@@ -8,6 +8,7 @@ selects which series to feed each builder and memoises the result.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -22,6 +23,8 @@ from .figures import (
     waiting_figure,
 )
 from .workflow import MantidWorkflow
+
+logger = logging.getLogger(__name__)
 
 
 class TemporalAnalysisModel(BaseModel):
@@ -146,11 +149,11 @@ class TemporalAnalysisModel(BaseModel):
     def get_models(self) -> Any:
         """Return the parent MainModel (or None) without importing it here."""
         try:
-            print("try get models from parent")
+            logger.debug("try get models from parent")
             if getattr(self, "_parent", None) is not None:
-                print("get models from parent")
+                logger.debug("get models from parent")
                 if self._parent:
-                    print(self._parent.experimentinfo)
+                    logger.debug(self._parent.experimentinfo)
                 return self._parent
         except Exception:
             return None
@@ -189,7 +192,7 @@ class TemporalAnalysisModel(BaseModel):
                     f"V = {lat['volume']:.2f} Å³"
                 )
         except Exception as e:
-            print(f"sync_latest_ub_from_workflow: {e}")
+            logger.debug(f"sync_latest_ub_from_workflow: {e}")
 
     # ---------- series resolution + figure dispatch ----------
 
@@ -331,7 +334,7 @@ class TemporalAnalysisModel(BaseModel):
             }
             wf.skip_reason = ""
         except Exception as e:
-            print(f"clear_plot_buffers: {e}")
+            logger.debug(f"clear_plot_buffers: {e}")
 
     def on_data_selection_change(self, new: str, old: str) -> None:
         """Thin wrapper around clear_plot_buffers for dropdown changes."""
@@ -382,7 +385,7 @@ class TemporalAnalysisModel(BaseModel):
                 proton_charges=wf.proton_charges,
             )
         except Exception as e:
-            print(f"save_latest_figure_snapshot: {e}")
+            logger.debug(f"save_latest_figure_snapshot: {e}")
             return {}
 
     # ---------- live-data lifecycle (delegates to workflow) ----------

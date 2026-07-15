@@ -15,10 +15,13 @@ Adding a new mode = register a class in :data:`SELECTOR_REGISTRY`.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol, Sequence
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -144,9 +147,9 @@ def _format_smallest_hkl_peaks(peaks_ws: Any, k_show: int = 10) -> str:
 
 def _print_peaks_summary(peaks_ws: Any, header: str, limit: int = 50, k_smallest: int = 10) -> None:
     """Print ``header`` + smallest-|HKL| candidates + workspace-order dump."""
-    print(header)
-    print(_format_smallest_hkl_peaks(peaks_ws, k_show=k_smallest))
-    print(_format_peaks_summary(peaks_ws, limit=limit))
+    logger.debug(header)
+    logger.debug(_format_smallest_hkl_peaks(peaks_ws, k_show=k_smallest))
+    logger.debug(_format_peaks_summary(peaks_ws, limit=limit))
 
 
 def _mnp_is_zero(peak: Any) -> bool:

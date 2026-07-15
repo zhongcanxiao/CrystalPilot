@@ -285,15 +285,15 @@ class Agent:
 
         msgs.extend(state["messages"][-20:])
 
-        print("[Agent] Calling LLM…")
+        logger.debug("[Agent] Calling LLM…")
         llm = get_configured_chat_model().bind_tools(self._tools)
         out = llm.invoke(msgs)
         tool_calls = getattr(out, "tool_calls", [])
         if tool_calls:
-            print(f"[Agent] LLM → tool calls: {[tc['name'] for tc in tool_calls]}")
+            logger.debug(f"[Agent] LLM → tool calls: {[tc['name'] for tc in tool_calls]}")
         else:
             content_preview = (out.content or "")[:80]
-            print(f"[Agent] LLM → reply: {content_preview}")
+            logger.debug(f"[Agent] LLM → reply: {content_preview}")
         return {
             "messages": [out],
             "config_state": state.get("config_state", {}),
@@ -316,7 +316,7 @@ class Agent:
         tool_msg = state["messages"][-1]
         if not isinstance(tool_msg, ToolMessage):
             return state
-        print(f"[Agent] Tool result: {tool_msg.name}")
+        logger.debug(f"[Agent] Tool result: {tool_msg.name}")
 
         try:
             if isinstance(tool_msg.content, str):

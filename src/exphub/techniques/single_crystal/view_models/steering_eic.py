@@ -7,9 +7,12 @@ handlers — and forwards here. This collaborator reaches back through the
 facade for the shared root model and the targeted ``_push_eiccontrol`` push.
 """
 
+import logging
 from typing import TYPE_CHECKING
 
 from ....core.beamline import active
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .steering import SingleCrystalSteeringViewModel
@@ -41,7 +44,7 @@ class EicActions:
             try:
                 row_builder.write_strategy_csv(angle_list, ipts_number, goniometer_type)
             except Exception as e:
-                print(f"Warning: failed to copy strategy to EIC location: {e}")
+                logger.warning(f"Warning: failed to copy strategy to EIC location: {e}")
             jobs = row_builder.build_jobs(angle_list, goniometer_type=goniometer_type)
             self._vm.model.eiccontrol.submit_jobs(
                 jobs,
@@ -76,7 +79,7 @@ class EicActions:
         try:
             self._vm.model.eiccontrol.poll_job_statuses(ipts_number, instrument_name)
         except Exception as e:
-            print(f"Error polling job statuses: {e}")
+            logger.warning(f"Error polling job statuses: {e}")
         self._vm._push_eiccontrol()
 
     def abort_job(self, scan_id: int) -> None:
