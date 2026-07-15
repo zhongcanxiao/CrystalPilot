@@ -9,6 +9,7 @@ formalize the seam as an ``EICRowBuilder`` protocol on the
 ``TechniqueManifest``.
 """
 
+import logging
 from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
@@ -17,6 +18,8 @@ from ..beamline import active as _active_beamline
 from ..beamline import get as _get_beamline
 from ..beamline import list_ids as _beamline_ids
 from .eic_client import EICClient
+
+logger = logging.getLogger(__name__)
 
 
 def _default_beamline_code() -> str:
@@ -123,9 +126,9 @@ class EICControlModel(BaseModel):
     )
 
     def load_token(self, file_path: str) -> None:
+        # The token is a credential — never print or log its value.
         with open(file_path, mode="r") as tokenfile:
             self.token = tokenfile.read()
-            print(self.token)
 
     def submit_jobs(
         self,
@@ -148,7 +151,7 @@ class EICControlModel(BaseModel):
         """
         self.beamline = self.beamline_database.get(instrument_name, "")
         if not self.beamline:
-            print(f"Instrument {instrument_name!r} is not a registered beamline; aborting EIC submit.")
+            logger.warning("Instrument %r is not a registered beamline; aborting EIC submit.", instrument_name)
             self.supported_beamline = False
             return
         eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
@@ -168,15 +171,14 @@ class EICControlModel(BaseModel):
             if rows is None:
                 rows = [job["row"]]
             first_row = rows[0] if rows else []
-            print(rows)
             desc_sub = desc + " " + str(first_row[0]) if first_row else desc
+            logger.debug("Submitting table scan: run_mode=0 headers=%s rows=%s", headers, rows)
             success, scan_id, response_data = eic_client.submit_table_scan(
                 parms={"run_mode": 0, "headers": headers, "rows": rows},
                 desc=desc_sub,
                 simulate_only=self.is_simulation,
             )
-            print({"run_mode": 0, "headers": headers, "rows": rows})
-            print(success, scan_id, response_data)
+            logger.debug("Submit result: success=%s scan_id=%s response=%s", success, scan_id, response_data)
             self.eic_submission_success.append(success)
             self.eic_submission_message.append(response_data["eic_response_message"])
             self.eic_submission_scan_id_list.append(scan_id)
@@ -201,8 +203,9 @@ class EICControlModel(BaseModel):
         self.beamline = self.beamline_database[instrument_name]
         eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
         eic_client.is_eic_enabled(print_results=True)
-        print(self.eic_submission_scan_id)
-        print(self.eic_submission_scan_id_list)
+        logger.debug(
+            "Aborting scan %s (all submitted: %s)", self.eic_submission_scan_id, self.eic_submission_scan_id_list
+        )
         eic_client.abort_scan(scan_id=self.eic_submission_scan_id)
 
     def poll_job_statuses(self, ipts_number: str, instrument_name: str) -> None:
