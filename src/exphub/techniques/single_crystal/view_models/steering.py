@@ -144,8 +144,6 @@ class SingleCrystalSteeringViewModel:
         # self.plotly_figure_bind = binding.new_bind(linked_object=self.plotly_config)
         # self.pyvista_config_bind = binding.new_bind(linked_object=self.pyvista_config)
 
-        # self.create_auto_update_cssstatus_figure()
-
         self.angleplan_updatefigure_coverage_bind = binding.new_bind()
 
         # Initialize temporalanalysis figures once at startup (no continuous callback)
@@ -241,16 +239,6 @@ class SingleCrystalSteeringViewModel:
         self.model.angleplan.load_ap(self.model.angleplan.plan_file)
         self._push_angleplan()
 
-    def update_view(self) -> None:
-        # Generic catch-all: pushes every sub-model. Prefer the targeted
-        # _push_* helpers below for handlers that only mutate one domain —
-        # 5x less serialization over the websocket per click.
-        self.view_state_bind.update_in_view(self.view_state)
-        self.angleplan_bind.update_in_view(self.model.angleplan)
-        self.eiccontrol_bind.update_in_view(self.model.eiccontrol)
-        self.cssstatus_bind.update_in_view(self.model.cssstatus)
-        self.temporalanalysis_bind.update_in_view(self.model.temporalanalysis)
-
     # ------- targeted view-state pushes (cheap, one bind each) ------------
     def _push_angleplan(self) -> None:
         self.angleplan_bind.update_in_view(self.model.angleplan)
@@ -325,14 +313,6 @@ class SingleCrystalSteeringViewModel:
         self.cssstatus_bind.update_in_view(self.model.cssstatus)
         # time.sleep(7)
 
-    async def auto_update_cssstatus_figure(self) -> None:
-        while True:
-            self.update_cssstatus_figure()
-            await asyncio.sleep(1)
-
-    def create_auto_update_cssstatus_figure(self) -> None:
-        asyncio.create_task(self.auto_update_cssstatus_figure())
-
     def update_temporalanalysis_figure(self, _: Any = None) -> None:
         # Prevent re-entrant calls (can happen if view updates cause model callbacks)
         if self._temporalanalysis_updating:
@@ -391,11 +371,6 @@ class SingleCrystalSteeringViewModel:
                 pass
         finally:
             self._temporalanalysis_updating = False
-
-    async def auto_update_temporalanalysis_figure(self) -> None:
-        while True:
-            self.update_temporalanalysis_figure()
-            await asyncio.sleep(30)
 
     def create_auto_update_temporalanalysis_figure(self) -> None:
         if self._live_update_task is not None and not self._live_update_task.done():
@@ -599,12 +574,6 @@ class SingleCrystalSteeringViewModel:
             self.model.angleplan.get_coverage_figure_with_symmetry()
         )
         self._push_angleplan()
-
-    def get_coverage_figure_with_symmetry(self) -> None:
-        _trace("get_coverage_figure_with_symmetry")
-        fig = self.model.angleplan.get_coverage_figure_with_symmetry()
-        self._push_angleplan()
-        return fig
 
     def get_figure_coverage(self) -> go.Figure:
         _trace("get_figure_coverage")
