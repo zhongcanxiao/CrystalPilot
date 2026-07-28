@@ -75,7 +75,7 @@ class SansStrategyView:
             InputField(v_model="model_strategy.export_file", label="Export file path")
             vuetify.VBtn("Export Strategy", click=self.view_model.export_strategy, style="align-self: center;")
 
-        vuetify.VCardTitle("SANS Experiment Run Strategy — grouped by sample holder")
+        vuetify.VCardTitle("SANS Experiment Run Strategy — grouped by {{ model_strategy.group_key }}")
 
         # Guidance messages (populated by a submit-time guidance check).
         vuetify.VAlert(

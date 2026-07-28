@@ -19,10 +19,10 @@ import plotly.graph_objects as go
 from nova.mvvm.interface import BindingInterface
 from pydantic import BaseModel, Field
 
+from ....core.tracing import _trace
 from ..models.root import SingleCrystalMainModel
 from .steering_angle_plan import AnglePlanActions
 from .steering_eic import EicActions
-from .tracing import _trace
 
 logger = logging.getLogger(__name__)
 

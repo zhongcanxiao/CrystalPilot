@@ -154,11 +154,9 @@ def build_column_specs(columns: List[str], rows: List[Dict[str, Any]], group_key
         spec = infer_column_spec(name, values, group_key=group_key)
         override = COLUMN_CATALOG.get(name)
         if override:
+            # Inference always supplies every ColumnSpec field, so a partial
+            # catalog entry only overrides what it names.
             spec = {**spec, **override, "key": name}
-            spec.setdefault("label", name)
-            spec.setdefault("options", [])
-            spec.setdefault("editable", name != group_key)
-            spec.setdefault("required", name == group_key)
         if name == group_key:
             spec["editable"] = False
             spec["required"] = True
@@ -166,12 +164,27 @@ def build_column_specs(columns: List[str], rows: List[Dict[str, Any]], group_key
     return specs
 
 
-def _holder_sort_key(holder: Any) -> tuple[int, Any]:
-    """Sort holders numerically when possible, else lexicographically."""
+def holder_sort_key(holder: Any) -> tuple[int, Any]:
+    """Sort group values numerically when possible, else lexicographically.
+
+    Shared with the EIC row builder so Sample ordering is identical in the UI
+    panels and in the submitted job sequence.
+    """
     try:
         return (0, int(float(str(holder))))
     except (TypeError, ValueError):
         return (1, str(holder))
+
+
+def group_label(holder: str, group_key: str) -> str:
+    """Display label for a Sample group, shared by the model and row builder.
+
+    Holder-index grouping (the legacy ``BL1A:sampleholder``) reads "Sample <n>";
+    Title-style grouping uses the raw value itself.
+    """
+    if holder == "":
+        return "Sample (unassigned)" if group_key == GROUP_KEY else "(untitled)"
+    return f"Sample {holder}" if group_key == GROUP_KEY else str(holder)
 
 
 class SansStrategyModel(BaseModel):
@@ -205,14 +218,6 @@ class SansStrategyModel(BaseModel):
     # holder-sorted. Pushed to the view to render the expandable panels.
     groups: List[Dict] = Field(default_factory=list, title="Sample Groups")
 
-    # Raw rows as read from the CSV, before id injection. Excluded from state pushes.
-    strategy_list_read: List[Dict] = Field(
-        default_factory=list,
-        title="SANS Strategy (raw)",
-        description="Rows as read from the uploaded CSV before normalisation.",
-        exclude=True,
-    )
-
     plan_name: str = Field(default="CrystalPilot SANS Plan", title="Strategy Name")
     plan_file: str = Field(default="", title="Strategy File", description="File path to the strategy CSV to upload.")
     export_file: str = Field(
@@ -242,7 +247,6 @@ class SansStrategyModel(BaseModel):
                     raw_rows.append({k: ("" if v is None else str(v)) for k, v in row.items() if k is not None})
 
         self.columns = columns
-        self.strategy_list_read = [dict(r) for r in raw_rows]
         self.column_specs = build_column_specs(columns, raw_rows, group_key=self.group_key)
 
         new_list: List[Dict] = []
@@ -282,7 +286,7 @@ class SansStrategyModel(BaseModel):
         for row in self.strategy_list:
             holder = str(row.get(self.group_key, "")).strip()
             counts[holder] = counts.get(holder, 0) + 1
-        ordered = sorted(counts, key=_holder_sort_key)
+        ordered = sorted(counts, key=holder_sort_key)
         self.groups = [
             {
                 "holder": holder,
@@ -293,10 +297,8 @@ class SansStrategyModel(BaseModel):
         ]
 
     def _group_label(self, holder: str) -> str:
-        """Label a group: "Sample <n>" for holder-index grouping, else the raw value."""
-        if holder == "":
-            return "Sample (unassigned)"
-        return f"Sample {holder}" if self.group_key == GROUP_KEY else str(holder)
+        """Label a group via the shared :func:`group_label` helper."""
+        return group_label(holder, self.group_key)
 
     def _next_id(self) -> int:
         return max((int(r.get("id", 0)) for r in self.strategy_list), default=0) + 1

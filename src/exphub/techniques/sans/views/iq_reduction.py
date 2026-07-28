@@ -49,11 +49,11 @@ class SansIQReductionView:
                     type="select",
                     label="Reduction / Prediction Model",
                 )
-            # Placeholder I(Q) figure. Seeded with the model's empty annotated
-            # figure; refreshed via the steering VM's figure-push bind.
+            # Placeholder I(Q) figure. Seeded through the VM accessor (the view
+            # never reaches into the model); refreshed via the figure-push bind.
             with HBoxLayout(halign="left", height="45vh"):
                 self.figure_iq = plotly.Figure()
-                self.figure_iq.update(self.view_model.model.iqreduction.get_figure())
+                self.figure_iq.update(self.view_model.get_iq_figure())
 
     def update_figure_iq(self, fig: object) -> None:
         self.figure_iq.update(fig)

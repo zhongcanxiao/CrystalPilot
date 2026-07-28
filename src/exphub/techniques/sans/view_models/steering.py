@@ -15,40 +15,31 @@ Structural mirror of the single-crystal steering VM, reduced to the SANS shape:
 
 Deliberately absent (no single-crystal machinery): no goniometer angle plan,
 no UB / coverage figures, no Mantid live-reduction loop, no temporal HKL
-editors. SANS has no reciprocal lattice to cover and (P4.2) no real reduction
-pipeline — the I(Q) tab renders a placeholder figure.
+editors. SANS has no reciprocal lattice to cover and no real reduction
+pipeline yet — the I(Q) tab renders a placeholder figure.
 
-This is *additive*. The SANS manifest and the mvvm_factory wiring that would
-instantiate this VM land in later P4 / P5 steps; nothing in ``app/`` constructs
-it yet. EIC submit is intentionally a guarded placeholder: the SANS EIC
-row-builder is TBD with the SANS scientist (see ``DECISION DEFAULTS`` in the P4
-task brief), so :meth:`submit_strategy` resolves the active technique's row
-builder if one exists and otherwise reports that submission is not yet wired.
+The manifest (``techniques/sans/manifest.py``) registers this VM via
+``steering_vm_factory`` and the app shell builds it through
+``app/mvvm_factory``. EIC submission is fully wired: the strategy table is
+grouped by the beamline's configured group column (``Title`` on USANS) and
+submits one multi-row table scan per Sample through the shared
+:class:`~exphub.core.eic.control.EICControlModel`, behind the pre-submission
+guidance gate.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Callable, Dict, Optional
 
 from nova.mvvm.interface import BindingInterface
 from pydantic import BaseModel, Field
 
 from ....core.beamline import active
+from ....core.tracing import _trace
 from ..models.root import SansMainModel
 
 logger = logging.getLogger(__name__)
-
-# Verbose tracing for ViewModel actions; off by default. Mirrors the
-# single-crystal steering VM's CRYSTALPILOT_DEBUG gate so SANS UI interactions
-# don't spam stdout. Set CRYSTALPILOT_DEBUG=1 to re-enable.
-_DEBUG = bool(os.environ.get("CRYSTALPILOT_DEBUG"))
-
-
-def _trace(*args: Any) -> None:
-    if _DEBUG:
-        print(*args)
 
 
 class SansSteeringViewState(BaseModel):
@@ -139,13 +130,9 @@ class SansSteeringViewModel:
     def _push_eiccontrol(self) -> None:
         self.eiccontrol_bind.update_in_view(self.model.eiccontrol)
 
-    def update_view(self) -> None:
-        """Generic catch-all push (prefer the targeted ``_push_*`` helpers)."""
-        self.view_state_bind.update_in_view(self.view_state)
-        self.iptsinfo_bind.update_in_view(self.model.iptsinfo)
-        self.strategy_bind.update_in_view(self.model.strategy)
-        self.iqreduction_bind.update_in_view(self.model.iqreduction)
-        self.eiccontrol_bind.update_in_view(self.model.eiccontrol)
+    def get_iq_figure(self) -> Any:
+        """Initial I(Q) figure for the LIVE tab (the view seeds through the VM)."""
+        return self.model.iqreduction.get_figure()
 
     # ------------------------------------------------------------------ #
     # strategy CSV load
@@ -221,12 +208,11 @@ class SansSteeringViewModel:
     def submit_strategy(self) -> None:
         """Submit the SANS strategy table through EIC.
 
-        Provisional: SANS submits through the same EIC pipeline as every other
-        beamline (``MULTI_TECHNIQUE_PLAN.md`` decision #1), but the SANS EIC
-        row-builder column shape is TBD with the SANS scientist. We resolve the
-        active technique's ``eic_row_builder`` if the SANS manifest has wired
-        one; until then this reports that submission is not yet available rather
-        than guessing a CSV layout.
+        SANS submits through the same EIC pipeline as every other beamline
+        (``MULTI_TECHNIQUE_PLAN.md`` decision #1): the guidance gate runs first
+        (errors block, warnings allow), then the SANS row builder groups the
+        table by the configured group column and each Sample goes out as one
+        multi-row table scan in the beamline's column contract.
         """
         from ....core.beamline import active_technique
 
@@ -246,26 +232,29 @@ class SansSteeringViewModel:
         if self.model.strategy.guidance_warnings and self._notify is not None:
             self._notify(f"Strategy has {len(self.model.strategy.guidance_warnings)} warning(s); submitting anyway.")
 
-        # Only honour the active technique's row builder when the active
-        # technique is actually SANS. Guards against the SANS submit button
-        # invoking the single-crystal row builder while the SANS manifest does
-        # not exist yet (active_technique() falls back to single_crystal).
+        # Defensive: only honour the active technique's row builder when the
+        # active technique is actually SANS (a mid-switch race would otherwise
+        # submit through the single-crystal builder). The manifest always
+        # supplies a builder, so a None here is a wiring bug, not a TBD.
         row_builder = None
         try:
             manifest = active_technique()
             if manifest.id == "sans":
                 row_builder = manifest.eic_row_builder
-        except Exception:  # noqa: BLE001 — no active SANS technique yet
+        except Exception:  # noqa: BLE001 — registry unavailable mid-switch
             row_builder = None
 
         if row_builder is None:
-            # TBD: SANS EIC row-builder not specified yet.
-            self.model.eiccontrol.eic_status = "SANS EIC submission not yet configured (row-builder TBD)"
+            self.model.eiccontrol.eic_status = "submission unavailable: no SANS row builder (technique wiring bug)"
             self._push_eiccontrol()
             return
 
         try:
-            jobs = row_builder.build_jobs(self.model.strategy.strategy_list, group_key=self.model.strategy.group_key)
+            jobs = row_builder.build_jobs(
+                self.model.strategy.strategy_list,
+                group_key=self.model.strategy.group_key,
+                columns=self.model.strategy.columns,
+            )
             self.model.eiccontrol.submit_jobs(jobs, ipts_number, instrument_name)
             if self.model.eiccontrol.is_simulation:
                 self.model.eiccontrol.eic_status = "job submission simulated"

@@ -12,24 +12,21 @@ from .view_models.chat import ChatViewModel
 
 
 def _build_steering(model: Any, binding: BindingInterface, notify_fn: Optional[Callable[[str], None]]) -> Any:
-    """Resolve and build the active technique's steering VM + root model.
+    """Resolve and build the active technique's steering VM.
 
-    The steering VM and root model both come from the active technique manifest
-    (``steering_vm_factory`` / ``root_model_factory``). Every shipped technique
-    supplies its own pair: single-crystal points at ``SingleCrystalMainModel`` +
-    ``SingleCrystalSteeringViewModel`` (now living under
-    ``techniques/single_crystal/``), SANS at its SANS analogues. A technique that
-    leaves ``steering_vm_factory`` ``None`` still falls back to the single-crystal
-    steering VM here, but both shipped manifests set it explicitly.
+    The steering VM comes from the active technique manifest
+    (``steering_vm_factory``), exactly like the root model comes from
+    ``root_model_factory`` — the shell never names a technique class. A missing
+    factory is a manifest wiring bug, not a fallback case: silently substituting
+    another technique's VM would bind the wrong tab surface.
     """
     manifest = active_technique()
     factory = manifest.steering_vm_factory
     if factory is None:
-        from ..techniques.single_crystal.view_models.steering import (
-            SingleCrystalSteeringViewModel,
+        raise RuntimeError(
+            f"Active technique {manifest.id!r} has no steering_vm_factory; "
+            "every technique manifest must supply one (see techniques/*/manifest.py)."
         )
-
-        return SingleCrystalSteeringViewModel(model, binding, notify_fn=notify_fn)
     return factory(model, binding, notify_fn=notify_fn)
 
 

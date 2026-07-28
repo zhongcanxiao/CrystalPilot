@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 import plotly.graph_objects as go
 
-from .tracing import _trace
+from ....core.tracing import _trace
 
 logger = logging.getLogger(__name__)
 
