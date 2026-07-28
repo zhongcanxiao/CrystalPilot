@@ -1,0 +1,9 @@
+Title,Comment,BL1A:Mot:Sample:X,BL1A:Mot:ARN,BL1A:CS:Scan:USANS1:Counts
+"test 1:1",'run1',100.0, 0.0,1.60e4
+"test 2:1",'run2',110.0, 5.0,1.60e4
+"test 2:2",'run2',110.0,15.0,1.60e4
+"test 2:3",'run2',110.0,25.0,1.60e4
+"test 2:4",'run2',110.0,35.0,1.60e4
+"test 2:5",'run2',110.0,45.0,1.00e4
+"test 3:1",'run3',120.0,73.9,1.00e4
+"test 3:2",'run3',120.0,75.9,1.00e4
