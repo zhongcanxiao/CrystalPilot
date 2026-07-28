@@ -12,7 +12,7 @@ builder never hard-codes a header list — it reads the column order off the row
 The only structural assumption is the **group column** (beamline-configurable
 via ``SansConfig.group_key``; legacy default
 :data:`~exphub.techniques.sans.models.strategy.GROUP_KEY` =
-``BL1A:sampleholder``, USANS uses ``Title``): rows sharing a group value form
+``BL1A:sampleholder``, USANS uses ``BL1A:Mot:Sample:X``): rows sharing a group value form
 one Sample, submitted as **one EIC table-scan carrying all of that Sample's
 steps**. That is why :meth:`build_jobs` emits one job per Sample with a ``rows``
 (plural) payload — the framework-agnostic

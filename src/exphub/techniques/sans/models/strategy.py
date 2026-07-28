@@ -9,14 +9,17 @@ measurement steps, submitted to EIC as one multi-row table scan.
 
 The group column is beamline-configurable (``SansConfig.group_key``): the legacy
 default is :data:`GROUP_KEY` (``BL1A:sampleholder``, an integer holder index);
-USANS groups by ``Title`` (a string), so a USANS CSV like::
+USANS groups by the sample position ``BL1A:Mot:Sample:X``, so a USANS CSV like::
 
     Title,Comment,BL1A:Mot:Sample:X,BL1A:Mot:ARN,BL1A:CS:Scan:USANS1:Counts
     test_01,run1,100.00,1.00,1.0E4
     test_01,run1,100.00,5.00,1.0E4
+    test_01,run1,110.00,1.00,1.0E4
 
-is one Sample ("test_01") carrying two steps, and submits as one EIC table scan
-whose ``headers``/``rows`` are the CSV verbatim.
+is two Samples (X=100.00 with two analyzer-rotation steps, X=110.00 with one),
+each submitting as one EIC table scan whose ``headers``/``rows`` are the CSV
+verbatim. Grouping compares the cell *strings* (stripped), so keep a consistent
+number format per position ("100.00" and "100.0" would be two groups).
 
 The table is discovered at upload time:
 
@@ -102,10 +105,11 @@ def infer_column_spec(name: str, values: List[Any], group_key: str = GROUP_KEY) 
 
     The group column is always forced to a non-editable, required column; its
     type follows its values (``int`` for holder-index grouping, ``str`` for
-    Title-style grouping — blank/absent values default to ``int`` for the
-    legacy holder column). A column named like a known enum becomes an enum; a
-    column whose non-blank values are all numeric becomes ``int``/``float``;
-    everything else is ``str``.
+    name-style grouping — blank/absent values default to ``int`` for the
+    legacy holder column; a catalog entry may override to ``float`` for a
+    motor-position group like Sample:X). A column named like a known enum
+    becomes an enum; a column whose non-blank values are all numeric becomes
+    ``int``/``float``; everything else is ``str``.
     """
     label = str(name)
     if name == group_key:
@@ -180,10 +184,11 @@ def group_label(holder: str, group_key: str) -> str:
     """Display label for a Sample group, shared by the model and row builder.
 
     Holder-index grouping (the legacy ``BL1A:sampleholder``) reads "Sample <n>";
-    Title-style grouping uses the raw value itself.
+    any other group column uses the raw value itself (e.g. the sample-X
+    position "100.00" on USANS).
     """
     if holder == "":
-        return "Sample (unassigned)" if group_key == GROUP_KEY else "(untitled)"
+        return "Sample (unassigned)"
     return f"Sample {holder}" if group_key == GROUP_KEY else str(holder)
 
 
@@ -191,8 +196,8 @@ class SansStrategyModel(BaseModel):
     """CSV-loadable, column-flexible SANS strategy table, grouped by Sample."""
 
     # The mandatory grouping column. Beamline-configurable (seeded from
-    # ``SansConfig.group_key`` by the steering VM): USANS groups by "Title";
-    # the legacy default is the sample-holder PV.
+    # ``SansConfig.group_key`` by the steering VM): USANS groups by the sample
+    # position "BL1A:Mot:Sample:X"; the legacy default is the sample-holder PV.
     group_key: str = Field(default=GROUP_KEY, title="Group Key")
 
     # Columns the active beamline requires a strategy CSV to contain (seeded
@@ -325,19 +330,21 @@ class SansStrategyModel(BaseModel):
     def add_sample(self) -> None:
         """Append a new Sample with one empty step.
 
-        For integer (holder-index) grouping the new group value is the next
-        integer; for string grouping (e.g. Title) it is a unique ``sample_<n>``
-        placeholder the user renames via export/reload.
+        For numeric grouping (holder index, sample-X position) the new group
+        value is the next integer above the existing values — a visible
+        placeholder position the user adjusts via export/reload (the group
+        cell is locked in the UI); for string grouping it is a unique
+        ``sample_<n>`` placeholder.
         """
         self._ensure_schema()
         existing_raw = [str(row.get(self.group_key, "")).strip() for row in self.strategy_list]
-        # Grouping style comes from the group column's spec (int for the legacy
-        # holder index, str for Title-style grouping) — not from whether the
-        # current table happens to contain integers.
+        # Grouping style comes from the group column's spec (int/float for
+        # numeric group columns, str for name-style grouping) — not from
+        # whether the current table happens to contain numbers.
         specs_by_key = {str(s.get("key")): s for s in self.column_specs}
         default_type = "int" if self.group_key == GROUP_KEY else "str"
-        group_is_int = specs_by_key.get(self.group_key, {}).get("type", default_type) == "int"
-        if group_is_int:
+        group_is_numeric = specs_by_key.get(self.group_key, {}).get("type", default_type) in ("int", "float")
+        if group_is_numeric:
             existing_ints: List[int] = []
             for value in existing_raw:
                 try:
@@ -392,11 +399,14 @@ class SansStrategyModel(BaseModel):
 
         specs_by_key = {str(s.get("key")): s for s in self.column_specs}
         group_spec = specs_by_key.get(self.group_key, {})
-        group_is_int = group_spec.get("type", "int" if self.group_key == GROUP_KEY else "str") == "int"
+        group_type = group_spec.get("type", "int" if self.group_key == GROUP_KEY else "str")
 
         # Per-row group-value checks only make sense when the group column
         # exists at all; when it is missing the single missing-column error
         # above already blocks (avoids one misleading "is blank" line per row).
+        # A numeric group column (holder index, sample-X position) must parse —
+        # a malformed group value would corrupt both the Sample grouping and
+        # the submitted motor position.
         group_column_present = not self.columns or self.group_key in self.columns
         if group_column_present:
             for row in self.strategy_list:
@@ -404,11 +414,13 @@ class SansStrategyModel(BaseModel):
                 rid = row.get("id")
                 if holder == "":
                     errors.append(f"Row {rid}: '{self.group_key}' is blank.")
-                elif group_is_int:
+                elif group_type == "int":
                     try:
                         int(float(holder))
                     except (TypeError, ValueError):
                         errors.append(f"Row {rid}: '{self.group_key}' value '{holder}' is not an integer.")
+                elif group_type == "float" and not _looks_float(holder):
+                    errors.append(f"Row {rid}: '{self.group_key}' value '{holder}' is not numeric.")
 
         for row in self.strategy_list:
             rid = row.get("id")

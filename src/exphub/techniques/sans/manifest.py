@@ -39,8 +39,9 @@ _ACTION_TOOLS = (
         description=(
             "Submit the current SANS strategy table to the EIC for execution. "
             "The table is grouped by the beamline's configured group column "
-            "(Title on USANS; BL1A:sampleholder on legacy CSVs) and each group "
-            "is submitted as one EIC table-scan carrying all of its steps. A "
+            "(the sample position BL1A:Mot:Sample:X on USANS; BL1A:sampleholder "
+            "on legacy CSVs) and each group is submitted as one EIC table-scan "
+            "carrying all of its steps. A "
             "pre-submission guidance check runs first: if it finds blocking "
             "errors the submission is refused and the issues are shown; warnings "
             "are surfaced but allow submission. Check that the strategy is "

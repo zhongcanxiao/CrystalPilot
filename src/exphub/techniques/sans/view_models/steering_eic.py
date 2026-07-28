@@ -6,7 +6,8 @@ SANS manifest's ``vm_method`` strings, the agent's action-verb allowlist, and
 the strategy view's click handlers — and forwards here. The shared
 authenticate / stop / poll / abort plumbing delegates to
 :class:`~exphub.core.eic.vm_actions.EicMonitorActions`; only the SANS submit
-verb (guidance gate + Title/holder-grouped table scans) lives in this module.
+verb (guidance gate + group-column-grouped table scans — sample-X position on
+USANS, holder index on legacy CSVs) lives in this module.
 """
 
 import logging

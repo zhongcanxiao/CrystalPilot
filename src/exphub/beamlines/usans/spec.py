@@ -99,9 +99,11 @@ USANS = BeamlineSpec(
         # Pre-fill the strategy-upload field with the USANS example plan. Blank-safe
         # if the path is absent (Upload just no-ops until the user picks a file).
         default_plan_file="/SNS/TOPAZ/shared/CrystalPilot/code/usans/strategy.csv",
-        # USANS strategy CSVs group rows by Title: every row sharing a Title is
-        # one EIC table scan (the scan's headers/rows are the CSV verbatim).
-        group_key="Title",
+        # USANS strategy CSVs group rows by the sample position: every row
+        # sharing a BL1A:Mot:Sample:X value is one physical sample and submits
+        # as one EIC table scan (the scan's headers/rows are the CSV verbatim,
+        # e.g. one scan per X covering its analyzer-rotation steps).
+        group_key="BL1A:Mot:Sample:X",
         # The BL-1A strategy-CSV column set (instrument-scientist specified).
         # Missing columns are blocking guidance errors at upload/submit time.
         required_columns=(

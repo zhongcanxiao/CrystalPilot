@@ -21,7 +21,8 @@ pipeline yet — the I(Q) tab renders a placeholder figure.
 The manifest (``techniques/sans/manifest.py``) registers this VM via
 ``steering_vm_factory`` and the app shell builds it through
 ``app/mvvm_factory``. EIC submission is fully wired: the strategy table is
-grouped by the beamline's configured group column (``Title`` on USANS) and
+grouped by the beamline's configured group column (``BL1A:Mot:Sample:X`` on
+USANS — one scan per sample position) and
 submits one multi-row table scan per Sample through the shared
 :class:`~exphub.core.eic.control.EICControlModel`, behind the pre-submission
 guidance gate.
@@ -94,9 +95,10 @@ class SansSteeringViewModel:
         self.iqreduction_updatefig_bind = binding.new_bind()
 
         # Seed the strategy table from the active beamline's SansConfig: the
-        # default upload path, the grouping column (USANS groups by "Title";
-        # the model default is the legacy sample-holder PV), and the required
-        # CSV column set the guidance check enforces. All blank-safe.
+        # default upload path, the grouping column (USANS groups by the sample
+        # position "BL1A:Mot:Sample:X"; the model default is the legacy
+        # sample-holder PV), and the required CSV column set the guidance
+        # check enforces. All blank-safe.
         config = getattr(active(), "technique_config", None)
         default_plan_file = getattr(config, "default_plan_file", "") or ""
         if default_plan_file and not self.model.strategy.plan_file:

@@ -193,8 +193,8 @@ class SansConfig(BaseModel):
     default_plan_file: str = ""
     # Strategy-CSV column whose value groups rows into one EIC table scan per
     # group. Empty string means "keep the strategy model's default"
-    # (``BL1A:sampleholder``). USANS groups by ``Title``: every row sharing a
-    # Title is one scan job.
+    # (``BL1A:sampleholder``). USANS groups by ``BL1A:Mot:Sample:X``: every
+    # row sharing a sample-X position is one physical sample / one scan job.
     group_key: str = ""
     # Columns a strategy CSV for this beamline must contain; the pre-submission
     # guidance check reports any that are missing as blocking errors. Empty
