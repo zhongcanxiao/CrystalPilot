@@ -110,7 +110,12 @@ def infer_column_spec(name: str, values: List[Any], group_key: str = GROUP_KEY) 
     label = str(name)
     if name == group_key:
         nonblank = [str(v).strip() for v in values if str(v).strip() != ""]
-        group_type = "int" if (not nonblank or all(_looks_int(v) for v in nonblank)) else "str"
+        if name == GROUP_KEY:
+            # The legacy holder PV is an integer index by contract — never let
+            # bad data relax the type (guidance must flag non-integer holders).
+            group_type = "int"
+        else:
+            group_type = "int" if (nonblank and all(_looks_int(v) for v in nonblank)) else "str"
         return {
             "key": name,
             "label": "Sample Holder" if name == GROUP_KEY else label,
@@ -244,7 +249,11 @@ class SansStrategyModel(BaseModel):
         for i, raw in enumerate(raw_rows):
             record: Dict[str, Any] = {"id": i + 1}
             for col in columns:
-                record[col] = str(raw.get(col, "") or "")
+                value = str(raw.get(col, "") or "")
+                # Normalise the group cell on ingest so the view's panel filter,
+                # the guidance rules, and the per-Sample submission grouping all
+                # see one canonical value (a stray space must not fork a group).
+                record[col] = value.strip() if col == self.group_key else value
             new_list.append(record)
         self.strategy_list = new_list
         self.recompute_groups()
@@ -303,7 +312,7 @@ class SansStrategyModel(BaseModel):
         self._ensure_schema()
         record: Dict[str, Any] = {"id": self._next_id()}
         for col in self.columns:
-            record[col] = str(holder) if col == self.group_key else ""
+            record[col] = str(holder).strip() if col == self.group_key else ""
         return record
 
     def add_step(self, holder: Any) -> None:
@@ -320,16 +329,22 @@ class SansStrategyModel(BaseModel):
         """
         self._ensure_schema()
         existing_raw = [str(row.get(self.group_key, "")).strip() for row in self.strategy_list]
-        existing_ints: List[int] = []
-        for value in existing_raw:
-            try:
-                existing_ints.append(int(float(value)))
-            except (TypeError, ValueError):
-                continue
-        nonblank = [v for v in existing_raw if v != ""]
-        if existing_ints or not nonblank:
+        # Grouping style comes from the group column's spec (int for the legacy
+        # holder index, str for Title-style grouping) — not from whether the
+        # current table happens to contain integers.
+        specs_by_key = {str(s.get("key")): s for s in self.column_specs}
+        default_type = "int" if self.group_key == GROUP_KEY else "str"
+        group_is_int = specs_by_key.get(self.group_key, {}).get("type", default_type) == "int"
+        if group_is_int:
+            existing_ints: List[int] = []
+            for value in existing_raw:
+                try:
+                    existing_ints.append(int(float(value)))
+                except (TypeError, ValueError):
+                    continue
             next_holder: Any = (max(existing_ints) + 1) if existing_ints else 1
         else:
+            nonblank = {v for v in existing_raw if v != ""}
             n = 1
             while f"sample_{n}" in nonblank:
                 n += 1
@@ -367,25 +382,31 @@ class SansStrategyModel(BaseModel):
 
         # Beamline-required columns (SansConfig.required_columns): a strategy
         # CSV in the wrong format is caught here, before anything reaches EIC.
+        # The group column is excluded — its absence is already reported above.
         if self.columns:
             for col in self.required_columns:
-                if col not in self.columns:
+                if col != self.group_key and col not in self.columns:
                     errors.append(f"Required column '{col}' is missing from the strategy CSV.")
 
         specs_by_key = {str(s.get("key")): s for s in self.column_specs}
         group_spec = specs_by_key.get(self.group_key, {})
         group_is_int = group_spec.get("type", "int" if self.group_key == GROUP_KEY else "str") == "int"
 
-        for row in self.strategy_list:
-            holder = str(row.get(self.group_key, "")).strip()
-            rid = row.get("id")
-            if holder == "":
-                errors.append(f"Row {rid}: '{self.group_key}' is blank.")
-            elif group_is_int:
-                try:
-                    int(float(holder))
-                except (TypeError, ValueError):
-                    errors.append(f"Row {rid}: '{self.group_key}' value '{holder}' is not an integer.")
+        # Per-row group-value checks only make sense when the group column
+        # exists at all; when it is missing the single missing-column error
+        # above already blocks (avoids one misleading "is blank" line per row).
+        group_column_present = not self.columns or self.group_key in self.columns
+        if group_column_present:
+            for row in self.strategy_list:
+                holder = str(row.get(self.group_key, "")).strip()
+                rid = row.get("id")
+                if holder == "":
+                    errors.append(f"Row {rid}: '{self.group_key}' is blank.")
+                elif group_is_int:
+                    try:
+                        int(float(holder))
+                    except (TypeError, ValueError):
+                        errors.append(f"Row {rid}: '{self.group_key}' value '{holder}' is not an integer.")
 
         for row in self.strategy_list:
             rid = row.get("id")
@@ -394,7 +415,10 @@ class SansStrategyModel(BaseModel):
                     continue
                 value = str(row.get(key, "")).strip()
                 if value == "":
-                    if spec.get("required"):
+                    # Blank-cell blocking is scoped to the beamline's own
+                    # required set — a catalog entry alone must not block other
+                    # SANS beamlines whose CSV reuses one of these column names.
+                    if spec.get("required") and key in self.required_columns:
                         errors.append(f"Row {rid}: required column '{key}' is blank.")
                     continue
                 col_type = spec.get("type")

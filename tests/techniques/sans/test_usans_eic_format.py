@@ -302,3 +302,32 @@ def test_simulation_flag_reaches_client(fake_eic: Any) -> None:
     ctrl.is_simulation = False
     ctrl.submit_jobs(jobs, ipts_number="IPTS-34567", instrument_name="USANS")
     assert fake_eic.all_submitted[0]["simulate_only"] is False
+
+
+def test_missing_title_column_reports_exactly_one_error(tmp_path: Path) -> None:
+    """A wrong-format CSV missing the group column yields one clear error.
+
+    Regression guard: with Title in both group_key and required_columns, the
+    missing column used to be reported twice plus one misleading "is blank"
+    line per row.
+    """
+    bad = tmp_path / "no_title.csv"
+    bad.write_text(
+        "Comment,BL1A:Mot:Sample:X,BL1A:Mot:ARN,BL1A:CS:Scan:USANS1:Counts\n"
+        "run1,100.00,1.00,1.0E4\n"
+        "run1,110.00,5.00,1.0E4\n"
+    )
+    vm = _usans_vm()
+    vm.model.strategy.plan_file = str(bad)
+    vm.upload_strategy()
+    errors = vm.model.strategy.guidance_errors
+    assert len([e for e in errors if "Title" in e]) == 1
+    assert not any("is blank" in e for e in errors)
+
+
+def test_add_sample_on_empty_title_grouped_table_uses_placeholder() -> None:
+    """An empty Title-grouped table seeds sample_<n>, not a numeric holder."""
+    m = SansStrategyModel(group_key="Title", required_columns=list(_HEADERS))
+    m.add_sample()
+    assert [g["holder"] for g in m.groups] == ["sample_1"]
+    assert m.strategy_list[0]["Title"] == "sample_1"

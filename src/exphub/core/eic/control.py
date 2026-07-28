@@ -85,11 +85,6 @@ class SubmittedJob(BaseModel):
 class EICControlModel(BaseModel):
     """Model for EIC Control."""
 
-    class Config:
-        """Pydantic config options."""
-
-        arbitrary_types_allowed = True  # Allow arbitrary types like EICClient
-
     username: str = Field(
         default="test_name",
         min_length=1,
@@ -106,13 +101,13 @@ class EICControlModel(BaseModel):
         title="Beamline",
         description="Name of the beamline",
     )
-    beamline_database: Dict = Field(
+    beamline_database: Dict[str, str] = Field(
         default_factory=_default_beamline_database,
         title="Beamline Database",
     )
     # Explicit per-instrument EIC server URLs (only instruments whose spec sets
     # EICSpec.server_url); everything else lets the client derive the URL.
-    beamline_server_urls: Dict = Field(
+    beamline_server_urls: Dict[str, str] = Field(
         default_factory=_default_beamline_server_urls,
         title="Beamline Server URLs",
     )
@@ -136,8 +131,8 @@ class EICControlModel(BaseModel):
     correct_run_format: bool = Field(default=True, title="Correct Run Format")
     supported_beamline: bool = Field(default=True, title="Supported Beamline")
 
-    submitted_jobs: List[Dict] = Field(default=[], title="Submitted Jobs")
-    submitted_jobs_headers: List[Dict] = Field(
+    submitted_jobs: List[Dict[str, Any]] = Field(default=[], title="Submitted Jobs")
+    submitted_jobs_headers: List[Dict[str, Any]] = Field(
         default=[
             {"title": "#", "key": "index", "sortable": False, "width": "50px"},
             {"title": "Title", "key": "title", "sortable": False},
@@ -197,7 +192,10 @@ class EICControlModel(BaseModel):
         eic_client = self._make_client(instrument_name, ipts_number)
         if eic_client is None:
             return
-        eic_client.is_eic_enabled(print_results=True)
+        if not eic_client.is_eic_enabled():
+            self.eic_status = "EIC is disabled for this beamline — nothing submitted"
+            logger.warning("EIC reports disabled for %s; submission skipped.", instrument_name)
+            return
 
         desc = "CrystalPilot Submission"
 
@@ -221,8 +219,13 @@ class EICControlModel(BaseModel):
                 simulate_only=self.is_simulation,
             )
             logger.debug("Submit result: success=%s scan_id=%s response=%s", success, scan_id, response_data)
+            # Transport failures may not carry the EIC message key — never
+            # KeyError mid-loop and leave the remaining jobs unrecorded.
+            message = response_data.get("eic_response_message") or response_data.get(
+                "http_error_response", "no response"
+            )
             self.eic_submission_success.append(success)
-            self.eic_submission_message.append(response_data["eic_response_message"])
+            self.eic_submission_message.append(message)
             self.eic_submission_scan_id_list.append(scan_id)
 
             submitted = SubmittedJob(
@@ -233,7 +236,7 @@ class EICControlModel(BaseModel):
                 omega=job.get("omega", 0.0) or 0.0,
                 status="submitted" if success else "failed",
                 is_done=False,
-                message=response_data.get("eic_response_message", ""),
+                message=message,
             )
             self.submitted_jobs.append(submitted.model_dump())
         self.current_scan_idx = 0
@@ -242,10 +245,12 @@ class EICControlModel(BaseModel):
 
     def stop_run(self, ipts_number: str, instrument_name: str) -> None:
         """Abort the currently selected scan (``eic_submission_scan_id``)."""
+        if self.eic_submission_scan_id < 0:
+            logger.warning("No submitted scan selected (scan id %s); nothing to stop.", self.eic_submission_scan_id)
+            return
         eic_client = self._make_client(instrument_name, ipts_number)
         if eic_client is None:
             return
-        eic_client.is_eic_enabled(print_results=True)
         logger.debug(
             "Aborting scan %s (all submitted: %s)", self.eic_submission_scan_id, self.eic_submission_scan_id_list
         )
@@ -260,17 +265,20 @@ class EICControlModel(BaseModel):
             return
         terminal_states = {"done", "aborted", "failed", "stopped"}
         for job in self.submitted_jobs:
-            if job["status"] in terminal_states:
+            if job.get("is_done") or job["status"] in terminal_states:
                 continue
             scan_id = job["scan_id"]
             if scan_id < 0:
                 continue
             try:
                 success, is_done, state, response_data = eic_client.get_scan_status(scan_id=scan_id)
-                if success and state is not None:
-                    job["status"] = str(state).lower()
+                if success:
+                    # Honour the server's done flag even when it sends no state
+                    # string, so a finished scan stops being polled.
                     job["is_done"] = bool(is_done)
-                elif not success:
+                    if state is not None:
+                        job["status"] = str(state).lower()
+                else:
                     job["status"] = "error"
                     job["message"] = response_data.get("eic_response_message", "status check failed")
             except Exception as e:
@@ -278,16 +286,26 @@ class EICControlModel(BaseModel):
                 job["message"] = str(e)
 
     def abort_job(self, scan_id: int, ipts_number: str, instrument_name: str) -> None:
-        """Abort a single job by scan_id."""
+        """Abort a single job by scan_id.
+
+        The job is marked aborted only when the EIC accepts the abort; a
+        rejected abort records the reason and leaves the status non-terminal so
+        the next poll refreshes it.
+        """
         eic_client = self._make_client(instrument_name, ipts_number)
         if eic_client is None:
             return
         try:
-            eic_client.abort_scan(scan_id=scan_id)
+            success, response_data = eic_client.abort_scan(scan_id=scan_id)
             for job in self.submitted_jobs:
                 if job["scan_id"] == scan_id:
-                    job["status"] = "aborted"
-                    job["is_done"] = True
+                    if success:
+                        job["status"] = "aborted"
+                        job["is_done"] = True
+                    else:
+                        job["message"] = response_data.get(
+                            "eic_response_message", "abort rejected"
+                        ) or response_data.get("http_error_response", "abort rejected")
         except Exception as e:
             for job in self.submitted_jobs:
                 if job["scan_id"] == scan_id:

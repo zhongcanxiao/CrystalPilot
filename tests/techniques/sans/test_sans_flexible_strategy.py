@@ -149,3 +149,44 @@ def test_guidance_warns_on_bad_enum_value() -> None:
     result = m.guidance_check()
     assert result["errors"] == []  # still submittable
     assert any("Wait For" in w for w in result["warnings"])
+
+
+def test_guidance_flags_non_integer_holder_on_load_path(tmp_path: Path) -> None:
+    """A legacy CSV with a bad holder must block at load, not only after edits.
+
+    Regression guard: the holder column's int type is contractual (the module
+    documents it as an integer index), so data-driven inference must not relax
+    it and silently skip the integer check for the whole table.
+    """
+    bad = tmp_path / "bad_holder.csv"
+    bad.write_text("Notes,BL1A:sampleholder\none,abc\ntwo,2\n")
+    m = SansStrategyModel()
+    m.load_strategy(str(bad))
+    spec = next(s for s in m.column_specs if s["key"] == GROUP_KEY)
+    assert spec["type"] == "int"  # contract wins over the bad data
+    result = m.guidance_check()
+    assert any("'abc' is not an integer" in e for e in result["errors"])
+
+
+def test_catalog_required_columns_do_not_block_legacy_tables(tmp_path: Path) -> None:
+    """A legacy table reusing a catalogued column name (e.g. Title) stays valid.
+
+    The blank-cell blocking rule is scoped to the beamline's required_columns;
+    the global COLUMN_CATALOG alone must not impose USANS rules elsewhere.
+    """
+    legacy = tmp_path / "legacy_with_title.csv"
+    legacy.write_text("BL1A:sampleholder,Title,Notes\n1,,free-form\n")
+    m = SansStrategyModel()  # legacy defaults: holder grouping, no required set
+    m.load_strategy(str(legacy))
+    result = m.guidance_check()
+    assert result["errors"] == []
+
+
+def test_whitespace_holder_is_normalised_on_load(tmp_path: Path) -> None:
+    """' 2' and '2' are one Sample everywhere (view filter, guidance, submit)."""
+    padded = tmp_path / "padded_holder.csv"
+    padded.write_text("Notes,BL1A:sampleholder\na, 2\nb,2\n")
+    m = SansStrategyModel()
+    m.load_strategy(str(padded))
+    assert [(g["holder"], g["count"]) for g in m.groups] == [("2", 2)]
+    assert all(r[GROUP_KEY] == "2" for r in m.strategy_list)
