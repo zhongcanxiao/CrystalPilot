@@ -3,9 +3,20 @@
 Unlike the single-crystal ``AnglePlanModel`` (which has a fixed goniometer-shaped
 row), the SANS strategy table is **column-flexible**: a strategy CSV may carry an
 arbitrary set of columns with arbitrary names and types. The only guaranteed
-column is :data:`GROUP_KEY` (``BL1A:sampleholder``), an integer whose value
-groups rows into **Samples** — every row sharing a holder value is one Sample's
-measurement steps.
+column is the **group column** (:attr:`SansStrategyModel.group_key`), whose value
+groups rows into **Samples** — every row sharing a group value is one Sample's
+measurement steps, submitted to EIC as one multi-row table scan.
+
+The group column is beamline-configurable (``SansConfig.group_key``): the legacy
+default is :data:`GROUP_KEY` (``BL1A:sampleholder``, an integer holder index);
+USANS groups by ``Title`` (a string), so a USANS CSV like::
+
+    Title,Comment,BL1A:Mot:Sample:X,BL1A:Mot:ARN,BL1A:CS:Scan:USANS1:Counts
+    test_01,run1,100.00,1.00,1.0E4
+    test_01,run1,100.00,5.00,1.0E4
+
+is one Sample ("test_01") carrying two steps, and submits as one EIC table scan
+whose ``headers``/``rows`` are the CSV verbatim.
 
 The table is discovered at upload time:
 
@@ -41,19 +52,20 @@ GROUP_KEY = "BL1A:sampleholder"
 # Column description seam (request item 2 — "complete description added later").
 #
 # COLUMN_CATALOG maps a raw CSV header -> partial ColumnSpec overrides that WIN
-# over inference. It is intentionally near-empty today; when the SANS scientist
-# provides the authoritative column catalogue, add entries here, e.g.:
-#
-#   COLUMN_CATALOG = {
-#       "Wait For": {"type": "enum",
-#                    "options": ["seconds", "Counts", "PCharge"],
-#                    "label": "Wait For"},
-#       "BL1A:anlge": {"type": "float", "label": "Analyser angle", "required": True},
-#   }
-#
-# Until then, everything is inferred from the data (see infer_column_spec).
+# over inference. Entries below are the instrument-scientist-specified USANS
+# (BL-1A) strategy columns; a catalogued ``required: True`` column with a blank
+# cell is a blocking guidance error (missing-column checks use the per-beamline
+# ``SansConfig.required_columns`` instead, since specs only exist for columns
+# the CSV actually carries). Columns absent from the catalog keep falling back
+# to inference (see infer_column_spec), so non-USANS SANS CSVs still work.
 # ---------------------------------------------------------------------------
-COLUMN_CATALOG: Dict[str, Dict[str, Any]] = {}
+COLUMN_CATALOG: Dict[str, Dict[str, Any]] = {
+    "Title": {"type": "str", "label": "Title", "required": True},
+    "Comment": {"type": "str", "label": "Comment"},
+    "BL1A:Mot:Sample:X": {"type": "float", "label": "Sample X", "required": True},
+    "BL1A:Mot:ARN": {"type": "float", "label": "Analyzer Rotation", "required": True},
+    "BL1A:CS:Scan:USANS1:Counts": {"type": "float", "label": "Counts", "required": True},
+}
 
 # Columns whose name (case-insensitive) marks them as an enum, with the known
 # control words. Observed values not in the list are appended so nothing a CSV
@@ -85,19 +97,24 @@ def _looks_int(s: Any) -> bool:
         return False
 
 
-def infer_column_spec(name: str, values: List[Any]) -> ColumnSpec:
+def infer_column_spec(name: str, values: List[Any], group_key: str = GROUP_KEY) -> ColumnSpec:
     """Infer a :data:`ColumnSpec` for a column from its name and sample values.
 
-    The group key is always forced to an integer, non-editable, required column.
-    A column named like a known enum becomes an enum; a column whose non-blank
-    values are all numeric becomes ``int``/``float``; everything else is ``str``.
+    The group column is always forced to a non-editable, required column; its
+    type follows its values (``int`` for holder-index grouping, ``str`` for
+    Title-style grouping — blank/absent values default to ``int`` for the
+    legacy holder column). A column named like a known enum becomes an enum; a
+    column whose non-blank values are all numeric becomes ``int``/``float``;
+    everything else is ``str``.
     """
     label = str(name)
-    if name == GROUP_KEY:
+    if name == group_key:
+        nonblank = [str(v).strip() for v in values if str(v).strip() != ""]
+        group_type = "int" if (not nonblank or all(_looks_int(v) for v in nonblank)) else "str"
         return {
             "key": name,
-            "label": "Sample Holder",
-            "type": "int",
+            "label": "Sample Holder" if name == GROUP_KEY else label,
+            "type": group_type,
             "options": [],
             "editable": False,
             "required": True,
@@ -120,19 +137,26 @@ def infer_column_spec(name: str, values: List[Any]) -> ColumnSpec:
     return {"key": name, "label": label, "type": "str", "options": [], "editable": True, "required": False}
 
 
-def build_column_specs(columns: List[str], rows: List[Dict[str, Any]]) -> List[ColumnSpec]:
-    """Build the per-column :data:`ColumnSpec` list (catalog overrides inference)."""
+def build_column_specs(columns: List[str], rows: List[Dict[str, Any]], group_key: str = GROUP_KEY) -> List[ColumnSpec]:
+    """Build the per-column :data:`ColumnSpec` list (catalog overrides inference).
+
+    The group column stays locked (non-editable, required) even when a catalog
+    entry covers it.
+    """
     specs: List[ColumnSpec] = []
     for name in columns:
         values = [r.get(name, "") for r in rows]
-        spec = infer_column_spec(name, values)
+        spec = infer_column_spec(name, values, group_key=group_key)
         override = COLUMN_CATALOG.get(name)
         if override:
             spec = {**spec, **override, "key": name}
             spec.setdefault("label", name)
             spec.setdefault("options", [])
-            spec.setdefault("editable", name != GROUP_KEY)
-            spec.setdefault("required", name == GROUP_KEY)
+            spec.setdefault("editable", name != group_key)
+            spec.setdefault("required", name == group_key)
+        if name == group_key:
+            spec["editable"] = False
+            spec["required"] = True
         specs.append(spec)
     return specs
 
@@ -148,9 +172,15 @@ def _holder_sort_key(holder: Any) -> tuple[int, Any]:
 class SansStrategyModel(BaseModel):
     """CSV-loadable, column-flexible SANS strategy table, grouped by Sample."""
 
-    # The mandatory grouping column. Kept configurable so a future beamline whose
-    # holder PV differs can override it, but defaults to the USANS holder PV.
+    # The mandatory grouping column. Beamline-configurable (seeded from
+    # ``SansConfig.group_key`` by the steering VM): USANS groups by "Title";
+    # the legacy default is the sample-holder PV.
     group_key: str = Field(default=GROUP_KEY, title="Group Key")
+
+    # Columns the active beamline requires a strategy CSV to contain (seeded
+    # from ``SansConfig.required_columns``). Missing ones are blocking guidance
+    # errors. Empty means only the group column is enforced.
+    required_columns: List[str] = Field(default_factory=list, title="Required Columns")
 
     # Raw CSV column order (excludes the injected ``id``). Drives export order and
     # the inline editor column order.
@@ -208,7 +238,7 @@ class SansStrategyModel(BaseModel):
 
         self.columns = columns
         self.strategy_list_read = [dict(r) for r in raw_rows]
-        self.column_specs = build_column_specs(columns, raw_rows)
+        self.column_specs = build_column_specs(columns, raw_rows, group_key=self.group_key)
 
         new_list: List[Dict] = []
         for i, raw in enumerate(raw_rows):
@@ -247,20 +277,26 @@ class SansStrategyModel(BaseModel):
         self.groups = [
             {
                 "holder": holder,
-                "label": f"Sample {holder}" if holder != "" else "Sample (unassigned)",
+                "label": self._group_label(holder),
                 "count": counts[holder],
             }
             for holder in ordered
         ]
 
+    def _group_label(self, holder: str) -> str:
+        """Label a group: "Sample <n>" for holder-index grouping, else the raw value."""
+        if holder == "":
+            return "Sample (unassigned)"
+        return f"Sample {holder}" if self.group_key == GROUP_KEY else str(holder)
+
     def _next_id(self) -> int:
         return max((int(r.get("id", 0)) for r in self.strategy_list), default=0) + 1
 
     def _ensure_schema(self) -> None:
-        """Seed a minimal schema (just the group key) if nothing is loaded yet."""
+        """Seed a minimal schema (group + required columns) if nothing is loaded yet."""
         if not self.columns:
-            self.columns = [self.group_key]
-            self.column_specs = build_column_specs(self.columns, [])
+            self.columns = [self.group_key] + [c for c in self.required_columns if c != self.group_key]
+            self.column_specs = build_column_specs(self.columns, [], group_key=self.group_key)
 
     def blank_row(self, holder: Any = "") -> Dict[str, Any]:
         """Build a new empty row for the current columns, holder pre-filled."""
@@ -276,15 +312,28 @@ class SansStrategyModel(BaseModel):
         self.recompute_groups()
 
     def add_sample(self) -> None:
-        """Append a new Sample (next integer holder) with one empty step."""
+        """Append a new Sample with one empty step.
+
+        For integer (holder-index) grouping the new group value is the next
+        integer; for string grouping (e.g. Title) it is a unique ``sample_<n>``
+        placeholder the user renames via export/reload.
+        """
         self._ensure_schema()
-        existing: List[int] = []
-        for row in self.strategy_list:
+        existing_raw = [str(row.get(self.group_key, "")).strip() for row in self.strategy_list]
+        existing_ints: List[int] = []
+        for value in existing_raw:
             try:
-                existing.append(int(float(str(row.get(self.group_key, "")))))
+                existing_ints.append(int(float(value)))
             except (TypeError, ValueError):
                 continue
-        next_holder = (max(existing) + 1) if existing else 1
+        nonblank = [v for v in existing_raw if v != ""]
+        if existing_ints or not nonblank:
+            next_holder: Any = (max(existing_ints) + 1) if existing_ints else 1
+        else:
+            n = 1
+            while f"sample_{n}" in nonblank:
+                n += 1
+            next_holder = f"sample_{n}"
         self.strategy_list.append(self.blank_row(next_holder))
         self.recompute_groups()
 
@@ -311,24 +360,33 @@ class SansStrategyModel(BaseModel):
         if not self.strategy_list:
             errors.append("Strategy table is empty — upload a CSV or add a Sample before submitting.")
         if self.columns and self.group_key not in self.columns:
-            errors.append(f"Required column '{self.group_key}' is missing from the strategy.")
+            errors.append(
+                f"Required column '{self.group_key}' is missing from the strategy "
+                f"(CSV columns: {', '.join(self.columns)})."
+            )
+
+        # Beamline-required columns (SansConfig.required_columns): a strategy
+        # CSV in the wrong format is caught here, before anything reaches EIC.
+        if self.columns:
+            for col in self.required_columns:
+                if col not in self.columns:
+                    errors.append(f"Required column '{col}' is missing from the strategy CSV.")
+
+        specs_by_key = {str(s.get("key")): s for s in self.column_specs}
+        group_spec = specs_by_key.get(self.group_key, {})
+        group_is_int = group_spec.get("type", "int" if self.group_key == GROUP_KEY else "str") == "int"
 
         for row in self.strategy_list:
             holder = str(row.get(self.group_key, "")).strip()
             rid = row.get("id")
             if holder == "":
                 errors.append(f"Row {rid}: '{self.group_key}' is blank.")
-            else:
+            elif group_is_int:
                 try:
                     int(float(holder))
                 except (TypeError, ValueError):
                     errors.append(f"Row {rid}: '{self.group_key}' value '{holder}' is not an integer.")
 
-        for spec in self.column_specs:
-            if spec.get("required") and spec.get("key") not in self.columns:
-                errors.append(f"Required column '{spec.get('key')}' is missing.")
-
-        specs_by_key = {s.get("key"): s for s in self.column_specs}
         for row in self.strategy_list:
             rid = row.get("id")
             for key, spec in specs_by_key.items():
@@ -336,6 +394,8 @@ class SansStrategyModel(BaseModel):
                     continue
                 value = str(row.get(key, "")).strip()
                 if value == "":
+                    if spec.get("required"):
+                        errors.append(f"Row {rid}: required column '{key}' is blank.")
                     continue
                 col_type = spec.get("type")
                 if col_type in ("int", "float") and not _looks_float(value):

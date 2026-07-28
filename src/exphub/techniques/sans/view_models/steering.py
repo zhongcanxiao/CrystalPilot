@@ -101,13 +101,20 @@ class SansSteeringViewModel:
         # analogue of the single-crystal temporal/coverage figure binds).
         self.iqreduction_updatefig_bind = binding.new_bind()
 
-        # Seed the strategy upload path from the active beamline's configured
-        # default (USANS points at its example strategy CSV), unless one is
-        # already set. Blank-safe: a missing path just makes Upload a no-op.
+        # Seed the strategy table from the active beamline's SansConfig: the
+        # default upload path, the grouping column (USANS groups by "Title";
+        # the model default is the legacy sample-holder PV), and the required
+        # CSV column set the guidance check enforces. All blank-safe.
         config = getattr(active(), "technique_config", None)
         default_plan_file = getattr(config, "default_plan_file", "") or ""
         if default_plan_file and not self.model.strategy.plan_file:
             self.model.strategy.plan_file = default_plan_file
+        group_key = getattr(config, "group_key", "") or ""
+        if group_key:
+            self.model.strategy.group_key = group_key
+        required_columns = tuple(getattr(config, "required_columns", ()) or ())
+        if required_columns:
+            self.model.strategy.required_columns = list(required_columns)
 
     # ------------------------------------------------------------------ #
     # generic callbacks
@@ -144,13 +151,28 @@ class SansSteeringViewModel:
     # strategy CSV load
     # ------------------------------------------------------------------ #
     def upload_strategy(self) -> None:
-        """Load the SANS strategy CSV named in ``model.strategy.plan_file``."""
+        """Load the SANS strategy CSV named in ``model.strategy.plan_file``.
+
+        Runs the guidance check immediately after a successful load so a CSV in
+        the wrong format (missing required columns, blank group values, bad
+        cell types) is flagged at upload time, not first at submit time.
+        """
         try:
             self.model.strategy.load_strategy(self.model.strategy.plan_file)
         except Exception as e:  # noqa: BLE001 — surface load errors to the user
             logger.warning(f"Failed to load SANS strategy CSV: {e}")
             if self._notify is not None:
                 self._notify(f"Failed to load strategy CSV: {e}")
+            self._push_strategy()
+            return
+        self.model.strategy.run_guidance()
+        if self._notify is not None:
+            n_err = len(self.model.strategy.guidance_errors)
+            n_warn = len(self.model.strategy.guidance_warnings)
+            if n_err:
+                self._notify(f"Strategy CSV format problem: {n_err} error(s), {n_warn} warning(s) — see guidance.")
+            elif n_warn:
+                self._notify(f"Strategy CSV loaded with {n_warn} warning(s) — see guidance.")
         self._push_strategy()
 
     # ------------------------------------------------------------------ #
@@ -243,7 +265,7 @@ class SansSteeringViewModel:
             return
 
         try:
-            jobs = row_builder.build_jobs(self.model.strategy.strategy_list)
+            jobs = row_builder.build_jobs(self.model.strategy.strategy_list, group_key=self.model.strategy.group_key)
             self.model.eiccontrol.submit_jobs(jobs, ipts_number, instrument_name)
             if self.model.eiccontrol.is_simulation:
                 self.model.eiccontrol.eic_status = "job submission simulated"

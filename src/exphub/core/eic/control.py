@@ -10,7 +10,7 @@ formalize the seam as an ``EICRowBuilder`` protocol on the
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -47,6 +47,26 @@ def _default_beamline_database() -> Dict[str, str]:
         except Exception:
             continue
     return db
+
+
+def _default_beamline_server_urls() -> Dict[str, str]:
+    """Mantid instrument name → explicit EIC server URL, where a spec sets one.
+
+    Only non-empty ``EICSpec.server_url`` values appear here; an absent entry
+    means "let the EIC client derive the URL from the beamline code" (the
+    normal case). Same per-entry resilience as the beamline-code map.
+    """
+    urls: Dict[str, str] = {}
+    for bid in _beamline_ids():
+        try:
+            spec = _get_beamline(bid)
+            name = spec.mantid_instrument_name
+            url = spec.eic.server_url
+            if name and url:
+                urls[name] = url
+        except Exception:
+            continue
+    return urls
 
 
 class SubmittedJob(BaseModel):
@@ -90,6 +110,12 @@ class EICControlModel(BaseModel):
         default_factory=_default_beamline_database,
         title="Beamline Database",
     )
+    # Explicit per-instrument EIC server URLs (only instruments whose spec sets
+    # EICSpec.server_url); everything else lets the client derive the URL.
+    beamline_server_urls: Dict = Field(
+        default_factory=_default_beamline_server_urls,
+        title="Beamline Server URLs",
+    )
 
     eic_submission_success: List[bool] = Field(default=[False], title="EIC Submission Success")
     eic_submission_message: List[str] = Field(default=["No message"], title="EIC Submission Message")
@@ -130,6 +156,25 @@ class EICControlModel(BaseModel):
         with open(file_path, mode="r") as tokenfile:
             self.token = tokenfile.read()
 
+    def _make_client(self, instrument_name: str, ipts_number: str) -> Optional[EICClient]:
+        """Resolve the instrument to an EIC client, or ``None`` if unsupported.
+
+        Central guard for every EIC operation: an instrument missing from the
+        beamline map flips ``supported_beamline`` and returns ``None`` instead
+        of raising ``KeyError`` mid-operation. When the beamline spec sets an
+        explicit ``server_url`` it is passed through as ``url_base`` (otherwise
+        the client derives the URL from the beamline code).
+        """
+        code = self.beamline_database.get(instrument_name, "")
+        if not code:
+            logger.warning("Instrument %r is not a registered beamline; skipping EIC operation.", instrument_name)
+            self.supported_beamline = False
+            return None
+        self.supported_beamline = True
+        self.beamline = code
+        url_base = self.beamline_server_urls.get(instrument_name) or None
+        return EICClient(self.token, beamline=code, ipts_number=ipts_number, url_base=url_base)
+
     def submit_jobs(
         self,
         jobs: List[Dict[str, Any]],
@@ -149,12 +194,9 @@ class EICControlModel(BaseModel):
         callers are unaffected. The framework stays technique-agnostic — it never
         inspects column names.
         """
-        self.beamline = self.beamline_database.get(instrument_name, "")
-        if not self.beamline:
-            logger.warning("Instrument %r is not a registered beamline; aborting EIC submit.", instrument_name)
-            self.supported_beamline = False
+        eic_client = self._make_client(instrument_name, ipts_number)
+        if eic_client is None:
             return
-        eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
         eic_client.is_eic_enabled(print_results=True)
 
         desc = "CrystalPilot Submission"
@@ -199,9 +241,10 @@ class EICControlModel(BaseModel):
             self.eic_submission_scan_id = self.eic_submission_scan_id_list[self.current_scan_idx]
 
     def stop_run(self, ipts_number: str, instrument_name: str) -> None:
-        # Implement the stop logic here
-        self.beamline = self.beamline_database[instrument_name]
-        eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
+        """Abort the currently selected scan (``eic_submission_scan_id``)."""
+        eic_client = self._make_client(instrument_name, ipts_number)
+        if eic_client is None:
+            return
         eic_client.is_eic_enabled(print_results=True)
         logger.debug(
             "Aborting scan %s (all submitted: %s)", self.eic_submission_scan_id, self.eic_submission_scan_id_list
@@ -212,8 +255,9 @@ class EICControlModel(BaseModel):
         """Poll EIC for the current status of all submitted jobs."""
         if not self.submitted_jobs:
             return
-        self.beamline = self.beamline_database[instrument_name]
-        eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
+        eic_client = self._make_client(instrument_name, ipts_number)
+        if eic_client is None:
+            return
         terminal_states = {"done", "aborted", "failed", "stopped"}
         for job in self.submitted_jobs:
             if job["status"] in terminal_states:
@@ -235,8 +279,9 @@ class EICControlModel(BaseModel):
 
     def abort_job(self, scan_id: int, ipts_number: str, instrument_name: str) -> None:
         """Abort a single job by scan_id."""
-        self.beamline = self.beamline_database[instrument_name]
-        eic_client = EICClient(self.token, beamline=self.beamline, ipts_number=ipts_number)
+        eic_client = self._make_client(instrument_name, ipts_number)
+        if eic_client is None:
+            return
         try:
             eic_client.abort_scan(scan_id=scan_id)
             for job in self.submitted_jobs:

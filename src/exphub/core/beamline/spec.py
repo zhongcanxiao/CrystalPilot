@@ -87,9 +87,11 @@ class EICSpec(BaseModel):
     supports_simulation: bool = True
     write_scope: list[str] = Field(default_factory=lambda: ["EIC:write"])
     # Per-beamline EIC server base URL. Empty string means "let the vendored
-    # EICClient derive the URL from ``beamline_code``" (its current behavior:
-    # e.g. bl12 -> https://bl12-dassrv1.sns.gov:8443). Other techniques (e.g.
-    # SANS/USANS) point at a different EIC server and set this explicitly.
+    # EICClient derive the URL from ``beamline_code``" (e.g. bl12 ->
+    # https://bl12-dassrv1.sns.gov:8443 in production, its dev URL otherwise).
+    # A non-empty value is passed to EICClient as ``url_base`` and overrides
+    # both that derivation and the token's embedded url_base — set it only for
+    # a beamline on a non-standard EIC host.
     server_url: str = ""
 
 
@@ -189,6 +191,16 @@ class SansConfig(BaseModel):
     # Default strategy-CSV path pre-filled into the steering tab's upload field.
     # Blank-safe: a missing path just makes Upload a no-op until the user picks one.
     default_plan_file: str = ""
+    # Strategy-CSV column whose value groups rows into one EIC table scan per
+    # group. Empty string means "keep the strategy model's default"
+    # (``BL1A:sampleholder``). USANS groups by ``Title``: every row sharing a
+    # Title is one scan job.
+    group_key: str = ""
+    # Columns a strategy CSV for this beamline must contain; the pre-submission
+    # guidance check reports any that are missing as blocking errors. Empty
+    # tuple means "no beamline-specific required set" (only the group column is
+    # enforced).
+    required_columns: tuple[str, ...] = ()
 
 
 TechniqueConfig = SingleCrystalConfig | SansConfig

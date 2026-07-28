@@ -81,8 +81,11 @@ TOPAZ = BeamlineSpec(
     eic=EICSpec(
         beamline_code="bl12",
         is_simulation_default=False,
-        # Current TOPAZ EIC server (matches the EICClient-derived URL for bl12).
-        server_url="https://bl12-dassrv1.sns.gov:8443",
+        # Empty: EICClient derives the TOPAZ URL from beamline_code
+        # (https://bl12-dassrv1.sns.gov:8443 in production, the dev URL
+        # otherwise). A non-empty value here overrides that derivation AND the
+        # token's embedded url_base — set only for a non-standard host.
+        server_url="",
     ),
     external_links={
         "data_reduction": "https://nova.ornl.gov/launch/nova-neutrons-trame-topaz",

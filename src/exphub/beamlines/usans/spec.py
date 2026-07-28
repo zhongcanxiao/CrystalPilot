@@ -13,8 +13,9 @@ PROVISIONAL VALUES — every real PV / URL below is a placeholder pending the BL
 beamline scientist. They are called out inline so they are easy to find and
 replace when integrating against the live BL-1A IOC / EIC server:
 
-  - ``eic.server_url`` — provisional ``https://eic.sns.gov`` (DECISION DEFAULTS;
-    the real USANS EIC endpoint is TBD).
+  - ``eic.server_url`` — empty: the EIC client derives the standard BL-1A
+    endpoint from ``beamline_code`` (``https://bl1a-dassrv1.sns.gov:8443`` in
+    production). Set it only if BL-1A uses a non-standard EIC host.
   - ``technique_config`` (``SansConfig``) — ``mantid_instrument_name`` is the
     Mantid USANS facility name; reduction/transmission PVs and the live-stream
     URL are ``None`` (unknown, documented as provisional).
@@ -63,12 +64,14 @@ USANS = BeamlineSpec(
         eic_dropbox="",
     ),
     eic=EICSpec(
-        # Per DECISION DEFAULTS: USANS sits on a different EIC server from the
-        # single-crystal beamlines. beamline_code "bl1a"; server_url is the
-        # provisional generic SNS EIC endpoint until the real one is specified.
+        # beamline_code "bl1a" is known to the vendored EICClient's SNS beamline
+        # table, so an empty server_url lets it derive the standard endpoint
+        # (https://bl1a-dassrv1.sns.gov:8443 in production, the dev URL
+        # otherwise). Set server_url only if BL-1A turns out to sit on a
+        # non-standard EIC host.
         beamline_code="bl1a",
         is_simulation_default=False,
-        server_url="https://eic.sns.gov",  # provisional — real USANS EIC TBD
+        server_url="",
     ),
     external_links={
         # Mantid USANS reduction documentation (web). Provisional pointer.
@@ -96,6 +99,18 @@ USANS = BeamlineSpec(
         # Pre-fill the strategy-upload field with the USANS example plan. Blank-safe
         # if the path is absent (Upload just no-ops until the user picks a file).
         default_plan_file="/SNS/TOPAZ/shared/CrystalPilot/code/usans/strategy.csv",
+        # USANS strategy CSVs group rows by Title: every row sharing a Title is
+        # one EIC table scan (the scan's headers/rows are the CSV verbatim).
+        group_key="Title",
+        # The BL-1A strategy-CSV column set (instrument-scientist specified).
+        # Missing columns are blocking guidance errors at upload/submit time.
+        required_columns=(
+            "Title",
+            "Comment",
+            "BL1A:Mot:Sample:X",
+            "BL1A:Mot:ARN",
+            "BL1A:CS:Scan:USANS1:Counts",
+        ),
     ),
     agent=AgentSpec(
         context_prompt=Path("prompts/context.md"),

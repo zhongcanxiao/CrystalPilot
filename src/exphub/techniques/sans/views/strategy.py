@@ -1,10 +1,11 @@
 """SANS strategy / experiment-steering tab view — flexible, Sample-grouped table.
 
 The SANS strategy surface. Unlike the single-crystal fixed goniometer table, the
-SANS table is **column-flexible** and **grouped by sample holder**
-(``BL1A:sampleholder``): one expandable panel per Sample, each showing that
-Sample's steps with **inline-editable** cells (every column except the holder,
-which is locked). The columns, their labels, and their editor type (enum drop-down
+SANS table is **column-flexible** and **grouped by the beamline's group column**
+(``Title`` on USANS; legacy ``BL1A:sampleholder`` elsewhere): one expandable
+panel per Sample, each showing that Sample's steps with **inline-editable**
+cells (every column except the group column, which is locked). The columns,
+their labels, and their editor type (enum drop-down
 vs free text) come from ``model_strategy.column_specs``, which is built at upload
 time — so this view renders whatever columns the uploaded CSV carried without any
 hard-coded column list.
@@ -96,7 +97,8 @@ class SansStrategyView:
 
         # Empty state: nothing loaded yet.
         vuetify.VAlert(
-            "Upload a strategy CSV (it must contain a BL1A:sampleholder column), or click “Add Sample” to start one.",
+            "Upload a strategy CSV (it must contain a '{{ model_strategy.group_key }}' column), "
+            "or click “Add Sample” to start one.",
             v_if="!model_strategy.groups || model_strategy.groups.length === 0",
             type="info",
             variant="tonal",

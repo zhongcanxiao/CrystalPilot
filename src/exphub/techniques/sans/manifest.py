@@ -38,7 +38,8 @@ _ACTION_TOOLS = (
         vm_method="submit_strategy",
         description=(
             "Submit the current SANS strategy table to the EIC for execution. "
-            "The table is grouped by the BL1A:sampleholder column and each Sample "
+            "The table is grouped by the beamline's configured group column "
+            "(Title on USANS; BL1A:sampleholder on legacy CSVs) and each group "
             "is submitted as one EIC table-scan carrying all of its steps. A "
             "pre-submission guidance check runs first: if it finds blocking "
             "errors the submission is refused and the issues are shown; warnings "
@@ -47,6 +48,10 @@ _ACTION_TOOLS = (
             "correct before calling this tool."
         ),
         success_message="SANS strategy submitted to EIC.",
+        # Submitting drives the real instrument — route through the
+        # propose -> user-confirms -> execute gate (matches the single-crystal
+        # submit_angle_plan verb).
+        requires_confirmation=True,
     ),
     ActionTool(
         name="export_strategy",
@@ -88,6 +93,9 @@ _ACTION_TOOLS = (
             "collection early."
         ),
         success_message="Current run stopped.",
+        # Aborting a running scan is destructive — gate it exactly like the
+        # single-crystal stop_current_run verb.
+        requires_confirmation=True,
     ),
 )
 

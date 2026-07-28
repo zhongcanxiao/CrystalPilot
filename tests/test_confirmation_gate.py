@@ -199,3 +199,16 @@ def test_destructive_verbs_require_confirmation() -> None:
     # Non-destructive verbs stay immediate.
     assert by_name["authenticate_eic"].requires_confirmation is False
     assert by_name["upload_strategy"].requires_confirmation is False
+
+
+def test_sans_destructive_verbs_require_confirmation() -> None:
+    """The SANS manifest gates its instrument-driving verbs like single-crystal."""
+    from exphub.techniques.sans.manifest import SANS
+
+    by_name = {t.name: t for t in SANS.action_tools}
+    assert by_name["submit_strategy"].requires_confirmation is True
+    assert by_name["stop_current_run"].requires_confirmation is True
+    # Non-destructive verbs stay immediate.
+    assert by_name["authenticate_eic"].requires_confirmation is False
+    assert by_name["upload_strategy"].requires_confirmation is False
+    assert by_name["export_strategy"].requires_confirmation is False

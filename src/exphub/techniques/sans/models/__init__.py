@@ -5,7 +5,8 @@ Mirror the *structure* of the single-crystal equivalents but in a SANS shape:
 - :mod:`.ipts_info` — sample-info fields only (no crystal system / point group /
   centering / UB / d-spacing).
 - :mod:`.strategy` — column-flexible, CSV-loadable editable strategy table; the
-  only guaranteed column is ``BL1A:sampleholder`` (groups rows into Samples).
+  only guaranteed column is the beamline-configured group column (``Title`` on
+  USANS, legacy ``BL1A:sampleholder`` default), which groups rows into Samples.
 - :mod:`.iq_reduction` — I(Q) reduction placeholder; the prediction-model
   dropdown stays ``"TBD"`` until a real SANS pipeline is specified.
 """

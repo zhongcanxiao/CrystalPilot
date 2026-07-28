@@ -71,8 +71,11 @@ CORELLI = BeamlineSpec(
     eic=EICSpec(
         beamline_code="bl9",
         is_simulation_default=False,
-        # Current CORELLI EIC server (matches the EICClient-derived URL for bl9).
-        server_url="https://bl9-dassrv1.sns.gov:8443",
+        # Empty: EICClient derives the CORELLI URL from beamline_code
+        # (https://bl9-dassrv1.sns.gov:8443 in production, the dev URL
+        # otherwise). A non-empty value here overrides that derivation AND the
+        # token's embedded url_base — set only for a non-standard host.
+        server_url="",
     ),
     external_links={},
     technique_config=SingleCrystalConfig(

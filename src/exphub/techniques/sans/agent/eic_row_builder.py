@@ -9,13 +9,16 @@ SANS strategy tables are **column-flexible**: the columns are whatever the
 uploaded CSV carried (discovered by
 :class:`~exphub.techniques.sans.models.strategy.SansStrategyModel`), so the row
 builder never hard-codes a header list — it reads the column order off the rows.
-The only structural assumption is :data:`~exphub.techniques.sans.models.strategy.GROUP_KEY`
-(``BL1A:sampleholder``): rows are **grouped by sample holder** and each Sample is
-submitted as **one EIC table-scan carrying all of that Sample's steps** (load the
-holder once, run every step). That is why :meth:`build_jobs` emits one job per
-Sample with a ``rows`` (plural) payload — the framework-agnostic
-:meth:`~exphub.core.eic.control.EICControlModel.submit_jobs` submits ``rows`` as a
-multi-row table scan.
+The only structural assumption is the **group column** (beamline-configurable
+via ``SansConfig.group_key``; legacy default
+:data:`~exphub.techniques.sans.models.strategy.GROUP_KEY` =
+``BL1A:sampleholder``, USANS uses ``Title``): rows sharing a group value form
+one Sample, submitted as **one EIC table-scan carrying all of that Sample's
+steps**. That is why :meth:`build_jobs` emits one job per Sample with a ``rows``
+(plural) payload — the framework-agnostic
+:meth:`~exphub.core.eic.control.EICControlModel.submit_jobs` submits ``rows`` as
+a multi-row table scan whose parameters are exactly
+``{"run_mode": 0, "headers": <CSV columns>, "rows": <cell values>}``.
 """
 
 from __future__ import annotations
@@ -125,23 +128,28 @@ class SansEICRowBuilder:
         group_key: str = GROUP_KEY,
         **_kwargs: Any,
     ) -> List[Dict[str, Any]]:
-        """Build one EIC submission payload **per Sample** (grouped by holder).
+        """Build one EIC submission payload **per Sample** (grouped by ``group_key``).
 
         Each job carries the flexible ``headers`` and a ``rows`` (plural) list —
-        every step for that Sample — plus display metadata (``title`` =
-        ``"Sample <holder>"``). SANS has no goniometer, so no ``phi`` / ``omega``
-        travel. The framework's ``submit_jobs`` submits ``rows`` as a single
-        multi-row table scan.
+        every step for that Sample — plus display metadata: ``title`` is
+        ``"Sample <holder>"`` for holder-index grouping and the raw group value
+        for Title-style grouping. SANS has no goniometer, so no ``phi`` /
+        ``omega`` travel. The framework's ``submit_jobs`` submits ``rows`` as a
+        single multi-row table scan.
         """
         headers = _headers_of(strategy_rows)
         jobs: List[Dict[str, Any]] = []
         for holder, group_rows in _group_by_holder(strategy_rows, group_key):
             rows = [[_cell(entry, k) for k in headers] for entry in group_rows]
+            if holder == "":
+                title = "Sample (unassigned)" if group_key == GROUP_KEY else "(untitled)"
+            else:
+                title = f"Sample {holder}" if group_key == GROUP_KEY else str(holder)
             jobs.append(
                 {
                     "headers": headers,
                     "rows": rows,
-                    "title": f"Sample {holder}" if holder != "" else "Sample (unassigned)",
+                    "title": title,
                     "sampleholder": holder,
                 }
             )
