@@ -227,9 +227,15 @@ class SansStrategyView:
                 click=self.view_model.poll_job_statuses,
             )
 
-        with VBoxLayout(classes="border-lg border-primary mb-1", stretch=True):
+        # Natural-height box, NOT stretch=True: stretch emits flex-1-1 +
+        # overflow-y-auto, which zeroes the flex min-height — inside the USANS
+        # merged tab's over-full scrollable column that makes this the only
+        # shrinkable item, so the whole Submitted Jobs table collapsed to
+        # ~0 px. Content height keeps it visible in both merged and full-tab
+        # contexts (the single-crystal twin fills a whole tab, so it keeps
+        # stretch).
+        with VBoxLayout(classes="border-lg border-primary mb-1"):
             with vuetify.VDataTable(
-                classes="flex-1-1",
                 headers=("model_eiccontrol.submitted_jobs_headers", []),
                 items=("model_eiccontrol.submitted_jobs", []),
             ):
