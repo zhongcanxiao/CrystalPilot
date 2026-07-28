@@ -331,3 +331,15 @@ def test_add_sample_on_empty_title_grouped_table_uses_placeholder() -> None:
     m.add_sample()
     assert [g["holder"] for g in m.groups] == ["sample_1"]
     assert m.strategy_list[0]["Title"] == "sample_1"
+
+
+def test_gated_submit_reports_blocked_not_success(fake_eic: Any) -> None:
+    """Confirmed-but-guidance-blocked submit reports the block, submits nothing."""
+    from exphub.agent.confirmation import ConfirmationGate
+
+    vm = _usans_vm()  # empty table -> guidance blocks
+    gate = ConfirmationGate()
+    gate.propose("submit_strategy", vm.submit_strategy, "SANS strategy submitted to EIC.")
+    result = gate.confirm()
+    assert "submission blocked" in result["message"]
+    assert fake_eic.all_submitted == []

@@ -62,7 +62,13 @@ class ConfirmationGate:
         }
 
     def confirm(self) -> dict:
-        """Execute the pending action. Called only on explicit user confirmation."""
+        """Execute the pending action. Called only on explicit user confirmation.
+
+        When the action returns a non-empty string, that string is the reported
+        outcome — a confirmed submit that the guidance gate then blocks must
+        report "submission blocked", not the canned success message. Actions
+        returning ``None`` keep the declared ``success_message``.
+        """
         pending = self._pending
         self._pending = None
         if pending is None:
@@ -70,10 +76,12 @@ class ConfirmationGate:
         if pending.fn is None:
             return {"error": f"{pending.name} action is not available in this session."}
         try:
-            pending.fn()
-            return {"status": "ok", "message": pending.success_message or f"{pending.name} completed."}
+            result = pending.fn()
         except Exception as exc:
             return {"error": str(exc)}
+        if isinstance(result, str) and result:
+            return {"status": "ok", "message": result}
+        return {"status": "ok", "message": pending.success_message or f"{pending.name} completed."}
 
     def cancel(self) -> dict:
         """Discard the pending action without executing it."""

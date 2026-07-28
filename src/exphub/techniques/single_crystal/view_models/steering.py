@@ -241,8 +241,9 @@ class SingleCrystalSteeringViewModel:
     ######################################################################################################################################################
     # print(self.model.angleplan.test_list)
 
-    def submit_angle_plan(self) -> None:
-        self._eic.submit_angle_plan()
+    def submit_angle_plan(self) -> str:
+        """Submit the angle plan through EIC; returns the outcome status string."""
+        return self._eic.submit_angle_plan()
 
     def call_load_token(self) -> None:
         self._eic.call_load_token()

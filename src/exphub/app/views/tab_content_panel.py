@@ -34,7 +34,7 @@ from ...core.beamline.tab_layout import active_layout, label_for
 from .placeholder_tab import PlaceholderTab
 
 if TYPE_CHECKING:
-    from ...techniques.single_crystal.view_models.steering import SingleCrystalSteeringViewModel
+    from ...core.beamline.technique import SteeringViewModel
     from ..view_models.app_shell import AppShellViewModel
 
 logger = logging.getLogger(__name__)
@@ -44,14 +44,14 @@ class TabContentPanel:
     """View class to render content for a selected tab.
 
     Tabs resolve their factory from the active beamline / technique manifest;
-    each technique tab factory binds to the single-crystal steering VM, while
-    the under-development dialog button resolves against the app-shell VM.
+    each technique tab factory binds to the active technique's steering VM,
+    while the under-development dialog button resolves against the app-shell VM.
     """
 
     def __init__(
         self,
         server: Server,
-        view_model: SingleCrystalSteeringViewModel,
+        view_model: SteeringViewModel,
         shell_view_model: AppShellViewModel,
     ) -> None:
         self.view_model = view_model

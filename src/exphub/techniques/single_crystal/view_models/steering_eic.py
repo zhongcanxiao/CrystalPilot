@@ -11,6 +11,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from ....core.beamline import active
+from ....core.eic.vm_actions import EicMonitorActions
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,15 @@ class EicActions:
 
     def __init__(self, vm: "SingleCrystalSteeringViewModel") -> None:
         self._vm = vm
+        # Shared authenticate/stop/poll/abort plumbing (identical across
+        # techniques up to where the IPTS number lives) lives in core.
+        self._monitor = EicMonitorActions(
+            get_eiccontrol=lambda: vm.model.eiccontrol,
+            get_ipts_number=lambda: vm.model.experimentinfo.ipts_number,
+            push=vm._push_eiccontrol,
+        )
 
-    def submit_angle_plan(self) -> None:
+    def submit_angle_plan(self) -> str:
         from ....core.beamline import active_technique
 
         # Resolve the active technique's EIC row builder (P3a.2 seam) so the
@@ -58,32 +66,16 @@ class EicActions:
         except Exception as e:
             self._vm.model.eiccontrol.eic_status = f"submission failed: {e}"
         self._vm._push_eiccontrol()
+        return self._vm.model.eiccontrol.eic_status
 
     def call_load_token(self) -> None:
-        try:
-            self._vm.model.eiccontrol.load_token(self._vm.model.eiccontrol.token_file)
-            self._vm.model.eiccontrol.eic_status = "authenticated successfully"
-        except Exception as e:
-            self._vm.model.eiccontrol.eic_status = f"authentication failed: {e}"
-        self._vm._push_eiccontrol()
+        self._monitor.load_token()
 
     def stoprun(self) -> None:
-        ipts_number = self._vm.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self._vm.model.eiccontrol.stop_run(ipts_number, instrument_name)
-        self._vm._push_eiccontrol()
+        self._monitor.stop_run()
 
     def poll_job_statuses(self) -> None:
-        ipts_number = self._vm.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        try:
-            self._vm.model.eiccontrol.poll_job_statuses(ipts_number, instrument_name)
-        except Exception as e:
-            logger.warning(f"Error polling job statuses: {e}")
-        self._vm._push_eiccontrol()
+        self._monitor.poll_job_statuses()
 
     def abort_job(self, scan_id: int) -> None:
-        ipts_number = self._vm.model.experimentinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self._vm.model.eiccontrol.abort_job(scan_id, ipts_number, instrument_name)
-        self._vm._push_eiccontrol()
+        self._monitor.abort_job(scan_id)

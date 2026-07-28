@@ -70,10 +70,14 @@ def _make_action_tool(
         if fn is None:
             return {"error": f"{spec.name} action is not available in this session."}
         try:
-            fn()
-            return {"status": "ok", "message": spec.success_message or f"{spec.name} completed."}
+            result = fn()
         except Exception as exc:
             return {"error": str(exc)}
+        # An action that returns a non-empty string reports its real outcome
+        # (e.g. a guidance-blocked submit) instead of the canned success line.
+        if isinstance(result, str) and result:
+            return {"status": "ok", "message": result}
+        return {"status": "ok", "message": spec.success_message or f"{spec.name} completed."}
 
     _run.__name__ = spec.name
     _run.__doc__ = spec.description or f"Run the {spec.name} action."

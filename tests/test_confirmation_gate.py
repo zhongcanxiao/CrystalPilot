@@ -212,3 +212,23 @@ def test_sans_destructive_verbs_require_confirmation() -> None:
     assert by_name["authenticate_eic"].requires_confirmation is False
     assert by_name["upload_strategy"].requires_confirmation is False
     assert by_name["export_strategy"].requires_confirmation is False
+
+
+def test_confirm_reports_action_outcome_over_success_message() -> None:
+    """A confirmed action that returns a status string reports THAT outcome.
+
+    Regression guard: a confirmed SANS submit that the guidance gate then
+    blocks must not claim "submitted" — the VM method's returned status wins
+    over the verb's canned success_message.
+    """
+    gate = ConfirmationGate()
+    gate.propose("submit_strategy", lambda: "submission blocked: 2 issue(s)", "SANS strategy submitted to EIC.")
+    result = gate.confirm()
+    assert result["status"] == "ok"
+    assert result["message"] == "submission blocked: 2 issue(s)"
+
+
+def test_confirm_falls_back_to_success_message_for_none_return() -> None:
+    gate = ConfirmationGate()
+    gate.propose("stop_current_run", lambda: None, "Current run stopped.")
+    assert gate.confirm()["message"] == "Current run stopped."

@@ -30,12 +30,26 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..eic.row_builder import EICRowBuilder
 from .spec import TabFactory
+
+
+class SteeringViewModel(Protocol):
+    """Structural contract for a technique steering VM as the app shell sees it.
+
+    The shell never names a technique class: the VM instance comes from the
+    manifest's ``steering_vm_factory``, tab content resolves through the
+    manifest's tab factories, and agent verbs resolve by ``vm_method`` name.
+    The only method the shell itself calls is the deactivation hook.
+    """
+
+    def on_deactivate(self) -> None:
+        """Quiesce the VM before an inside-technique beamline switch."""
+
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +154,9 @@ class TechniqueManifest(BaseModel):
     # ``app/mvvm_factory.create_viewmodels`` as ``factory(root_model, binding,
     # notify_fn=...)`` to build the technique's orchestration VM — the object
     # whose ``*_bind`` attributes back the technique's tabs and whose
-    # ``on_deactivate`` the shell calls on an inside-technique switch. ``None``
-    # means the app falls back to the single-crystal steering VM (the historical
-    # default), so existing single-crystal beamlines need no manifest change.
+    # ``on_deactivate`` the shell calls on an inside-technique switch (see
+    # :class:`SteeringViewModel`). Every shipped manifest must set it: the app
+    # shell fails fast on ``None`` rather than guessing a technique's VM.
     steering_vm_factory: Callable[..., Any] | None = None
 
 

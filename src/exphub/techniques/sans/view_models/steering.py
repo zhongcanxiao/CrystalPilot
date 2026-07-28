@@ -38,6 +38,7 @@ from pydantic import BaseModel, Field
 from ....core.beamline import active
 from ....core.tracing import _trace
 from ..models.root import SansMainModel
+from .steering_eic import SansEicActions
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,11 @@ class SansSteeringViewModel:
         required_columns = tuple(getattr(config, "required_columns", ()) or ())
         if required_columns:
             self.model.strategy.required_columns = list(required_columns)
+
+        # Facade collaborators (same split as the single-crystal steering VM):
+        # the EIC verbs live in SansEicActions; the facade keeps the public
+        # names the manifest / views / agent resolve against.
+        self._eic = SansEicActions(self)
 
     # ------------------------------------------------------------------ #
     # generic callbacks
@@ -205,93 +211,26 @@ class SansSteeringViewModel:
     # ------------------------------------------------------------------ #
     # EIC submit / auth / stop (shared pipeline; SANS row-builder TBD)
     # ------------------------------------------------------------------ #
-    def submit_strategy(self) -> None:
-        """Submit the SANS strategy table through EIC.
+    def submit_strategy(self) -> str:
+        """Submit the SANS strategy table through EIC; returns the outcome status.
 
-        SANS submits through the same EIC pipeline as every other beamline
-        (``MULTI_TECHNIQUE_PLAN.md`` decision #1): the guidance gate runs first
-        (errors block, warnings allow), then the SANS row builder groups the
-        table by the configured group column and each Sample goes out as one
-        multi-row table scan in the beamline's column contract.
+        Delegates to :class:`SansEicActions` (guidance gate, then one multi-row
+        table scan per Sample in the beamline's column contract). The status
+        string feeds the confirmation gate's user-facing result.
         """
-        from ....core.beamline import active_technique
-
-        ipts_number = self.model.iptsinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-
-        # Pre-submission guidance gate: errors block submission, warnings are
-        # surfaced but allow it. Rules live on the strategy model (real
-        # scientific rules TBD with the SANS scientist).
-        ok = self.model.strategy.run_guidance()
-        self._push_strategy()
-        if not ok:
-            n = len(self.model.strategy.guidance_errors)
-            self.model.eiccontrol.eic_status = f"submission blocked: {n} issue(s) — see guidance above"
-            self._push_eiccontrol()
-            return
-        if self.model.strategy.guidance_warnings and self._notify is not None:
-            self._notify(f"Strategy has {len(self.model.strategy.guidance_warnings)} warning(s); submitting anyway.")
-
-        # Defensive: only honour the active technique's row builder when the
-        # active technique is actually SANS (a mid-switch race would otherwise
-        # submit through the single-crystal builder). The manifest always
-        # supplies a builder, so a None here is a wiring bug, not a TBD.
-        row_builder = None
-        try:
-            manifest = active_technique()
-            if manifest.id == "sans":
-                row_builder = manifest.eic_row_builder
-        except Exception:  # noqa: BLE001 — registry unavailable mid-switch
-            row_builder = None
-
-        if row_builder is None:
-            self.model.eiccontrol.eic_status = "submission unavailable: no SANS row builder (technique wiring bug)"
-            self._push_eiccontrol()
-            return
-
-        try:
-            jobs = row_builder.build_jobs(
-                self.model.strategy.strategy_list,
-                group_key=self.model.strategy.group_key,
-                columns=self.model.strategy.columns,
-            )
-            self.model.eiccontrol.submit_jobs(jobs, ipts_number, instrument_name)
-            if self.model.eiccontrol.is_simulation:
-                self.model.eiccontrol.eic_status = "job submission simulated"
-            else:
-                self.model.eiccontrol.eic_status = "jobs submitted"
-        except Exception as e:  # noqa: BLE001
-            self.model.eiccontrol.eic_status = f"submission failed: {e}"
-        self._push_eiccontrol()
+        return self._eic.submit_strategy()
 
     def call_load_token(self) -> None:
-        try:
-            self.model.eiccontrol.load_token(self.model.eiccontrol.token_file)
-            self.model.eiccontrol.eic_status = "authenticated successfully"
-        except Exception as e:  # noqa: BLE001
-            self.model.eiccontrol.eic_status = f"authentication failed: {e}"
-        self._push_eiccontrol()
+        self._eic.call_load_token()
 
     def stoprun(self) -> None:
-        ipts_number = self.model.iptsinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self.model.eiccontrol.stop_run(ipts_number, instrument_name)
-        self._push_eiccontrol()
+        self._eic.stoprun()
 
     def poll_job_statuses(self) -> None:
-        ipts_number = self.model.iptsinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        try:
-            self.model.eiccontrol.poll_job_statuses(ipts_number, instrument_name)
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"Error polling job statuses: {e}")
-        self._push_eiccontrol()
+        self._eic.poll_job_statuses()
 
     def abort_job(self, scan_id: int) -> None:
-        ipts_number = self.model.iptsinfo.ipts_number
-        instrument_name = active().mantid_instrument_name
-        self.model.eiccontrol.abort_job(scan_id, ipts_number, instrument_name)
-        self._push_eiccontrol()
+        self._eic.abort_job(scan_id)
 
     # ------------------------------------------------------------------ #
     # lifecycle

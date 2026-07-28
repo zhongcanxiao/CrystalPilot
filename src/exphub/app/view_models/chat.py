@@ -146,7 +146,8 @@ class ChatViewModel:
             # Pre-agent handler chain: handle deterministic commands without LLM
             snapshot_fn = partial(snapshot_models, self.main_model)
             schema_props = self._agent.schema_properties if self._agent else {}
-            handler_reply = run_handlers(
+            run_chain = partial(
+                run_handlers,
                 user_text,
                 snapshot_fn=snapshot_fn,
                 schema_props=schema_props,
@@ -154,6 +155,13 @@ class ChatViewModel:
                 phase_manager=self._phase_manager,
                 confirmation_gate=self._confirmation_gate,
             )
+            if self._confirmation_gate is not None and self._confirmation_gate.has_pending():
+                # A pending destructive action means the "yes" leg executes the
+                # real EIC call inside run_handlers — offload it exactly like
+                # agent.invoke below so the event loop / UI stay responsive.
+                handler_reply = await asyncio.get_running_loop().run_in_executor(None, run_chain)
+            else:
+                handler_reply = run_chain()
             if handler_reply is not None:
                 logger.debug(f"[CrystalPilot Agent] Handler shortcut: {handler_reply[:80]}")
                 self.chat_model.messages.append(
