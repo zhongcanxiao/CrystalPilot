@@ -1,6 +1,6 @@
 [project]
 name = "exphub"
-version = "0.2.4"
+version = "0.2.5"
 description = "CrystalPilot Project"
 authors = []
 readme = "README.md"

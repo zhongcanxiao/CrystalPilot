@@ -232,7 +232,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ff/0e/8e938edc6996b0b438bfb5a70eb39a4d6094380db9c66c6ebbf1bc1a18fa/nova_common-0.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/68/12/6272044651e20272ee76e2111c5b1cc122913725d3b9d40a81bb44043de4/nova_epics-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/19/fdaf99e9834f965bb5b86b61491f1d99de9f39c647d0eda0ab7ce1e27fc8/nova_mvvm-1.0.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/52/1a/a7310689a81a83f7dad55e97794ff4a5ee2446fdc06af12df7dac85be3ed/nova_trame-1.9.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ed/f3/a7bd556ca5527b0a192871a8e065c4bd6e29266c57bc165e3717aa29c599/nova_trame-1.9.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/9c/92789c596b8df838baa98fa71844d84283302f7604ed565dafe5a6b5041a/oauthlib-3.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/50/d6cc4d7e508bbccf5d6027314a8312bc7ac73d0ec7f195f53838daafab40/pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
@@ -497,7 +497,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ff/0e/8e938edc6996b0b438bfb5a70eb39a4d6094380db9c66c6ebbf1bc1a18fa/nova_common-0.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/68/12/6272044651e20272ee76e2111c5b1cc122913725d3b9d40a81bb44043de4/nova_epics-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/19/fdaf99e9834f965bb5b86b61491f1d99de9f39c647d0eda0ab7ce1e27fc8/nova_mvvm-1.0.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/52/1a/a7310689a81a83f7dad55e97794ff4a5ee2446fdc06af12df7dac85be3ed/nova_trame-1.9.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ed/f3/a7bd556ca5527b0a192871a8e065c4bd6e29266c57bc165e3717aa29c599/nova_trame-1.9.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/9c/92789c596b8df838baa98fa71844d84283302f7604ed565dafe5a6b5041a/oauthlib-3.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/ef/f1fd7431d635bf20015489bf0bd69c17fff1018de773540f651455a3916b/pandas-3.0.5-cp311-cp311-macosx_10_9_x86_64.whl
@@ -781,7 +781,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ff/0e/8e938edc6996b0b438bfb5a70eb39a4d6094380db9c66c6ebbf1bc1a18fa/nova_common-0.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/68/12/6272044651e20272ee76e2111c5b1cc122913725d3b9d40a81bb44043de4/nova_epics-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/19/fdaf99e9834f965bb5b86b61491f1d99de9f39c647d0eda0ab7ce1e27fc8/nova_mvvm-1.0.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/52/1a/a7310689a81a83f7dad55e97794ff4a5ee2446fdc06af12df7dac85be3ed/nova_trame-1.9.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ed/f3/a7bd556ca5527b0a192871a8e065c4bd6e29266c57bc165e3717aa29c599/nova_trame-1.9.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/9c/92789c596b8df838baa98fa71844d84283302f7604ed565dafe5a6b5041a/oauthlib-3.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d1/50/d6cc4d7e508bbccf5d6027314a8312bc7ac73d0ec7f195f53838daafab40/pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
@@ -1008,7 +1008,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/ff/0e/8e938edc6996b0b438bfb5a70eb39a4d6094380db9c66c6ebbf1bc1a18fa/nova_common-0.3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/68/12/6272044651e20272ee76e2111c5b1cc122913725d3b9d40a81bb44043de4/nova_epics-0.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/8a/19/fdaf99e9834f965bb5b86b61491f1d99de9f39c647d0eda0ab7ce1e27fc8/nova_mvvm-1.0.0-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/52/1a/a7310689a81a83f7dad55e97794ff4a5ee2446fdc06af12df7dac85be3ed/nova_trame-1.9.2-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/ed/f3/a7bd556ca5527b0a192871a8e065c4bd6e29266c57bc165e3717aa29c599/nova_trame-1.9.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/9c/92789c596b8df838baa98fa71844d84283302f7604ed565dafe5a6b5041a/oauthlib-3.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/48/ef/f1fd7431d635bf20015489bf0bd69c17fff1018de773540f651455a3916b/pandas-3.0.5-cp311-cp311-macosx_10_9_x86_64.whl
@@ -1704,8 +1704,8 @@ packages:
   timestamp: 1767781715020
 - pypi: ./
   name: exphub
-  version: 0.2.4
-  sha256: 191bb601714329a3629985abcbae693f32e70d147b08b614fe60a7b26c5060f2
+  version: 0.2.5
+  sha256: a8bc5810fe40b756adbd2f8cd27ab7a16938d792f5700c5ae81bbaddce37cfae
   requires_python: '>=3.10,<3.14'
 - pypi: https://files.pythonhosted.org/packages/01/a4/9b63d595d748e3aff8812b65eacc1a2c4bd90b7c2012e08e72373b4835eb/filelock-3.32.4-py3-none-any.whl
   name: filelock
@@ -4181,10 +4181,10 @@ packages:
   - pyqt5>=5.15 ; extra == 'pyqt5'
   - pyqt6>=6 ; extra == 'pyqt6'
   requires_python: '>=3.10,<3.14'
-- pypi: https://files.pythonhosted.org/packages/52/1a/a7310689a81a83f7dad55e97794ff4a5ee2446fdc06af12df7dac85be3ed/nova_trame-1.9.2-py3-none-any.whl
+- pypi: https://files.pythonhosted.org/packages/ed/f3/a7bd556ca5527b0a192871a8e065c4bd6e29266c57bc165e3717aa29c599/nova_trame-1.9.3-py3-none-any.whl
   name: nova-trame
-  version: 1.9.2
-  sha256: 5d739817cb66ced6365a9c6e61057b151ae75e57f60ea62da44288ddd48d4440
+  version: 1.9.3
+  sha256: 2e691a3a5b24c5db9c50b6b8a0ec26a4ad0e8a8d09759c83a2665b94012dabbd
   requires_dist:
   - altair
   - blinker>=1.9.0,<2
