@@ -26,8 +26,8 @@ class ExperimentInfoView:
             InputField(v_model="config.point_group", items="config.options.point_group_list", type="select")
             InputField(v_model="config.centering", items="config.options.centering_list", type="select")
         with GridLayout(columns=2, gap="0.5em"):
-            RemoteFileInput(v_model="config.UBFileName")
-            RemoteFileInput(v_model="config.cal_filename")
+            RemoteFileInput(v_model="config.UBFileName", base_paths=["/HFIR", "/SNS"])
+            RemoteFileInput(v_model="config.cal_filename", base_paths=["/HFIR", "/SNS"])
             InputField(v_model="config.min_dspacing")
             InputField(v_model="config.max_dspacing")
 

@@ -74,7 +74,8 @@ class ExperimentInfoModel(BaseModel):
     )
     read_ub: Optional[bool] = Field(default=False, title="Read UB Matrix")
     UBFileName: Optional[str] = Field(
-        default="/home/zx5/1-todo/4-integrate/nxv/nxv-git-zhongcanxiao/src/TOPAZ_44752_Tetragonal.mat",
+        # default="/home/zx5/1-todo/4-integrate/nxv/nxv-git-zhongcanxiao/src/TOPAZ_44752_Tetragonal.mat",
+        default="",
         title="UB File",
         description="Optional UB matrix file.",
     )

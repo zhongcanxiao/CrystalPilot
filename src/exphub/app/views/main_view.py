@@ -49,6 +49,6 @@ class MainApp(ThemedApp):
                 open("BL12_ADnED_2D_4x4.bob", mode="r") as xml_file,
                 open("BL12_ADnED_2D_4x4.macros", mode="r") as macros_file,
             ):
-                self.epics.connect(xml_file.read(), macros_file.read(), 6)
+                self.epics.connect(xml_file.read(), macros_file.read(), 6, 2500)
 
             return layout
