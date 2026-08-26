@@ -107,6 +107,10 @@ class MainViewModel:
             print(f"model fields updated: {results['updated']}")
         # time.sleep(7)
 
+        if "ipts_number" in results.get("updated", []):
+            self.model.dataanalysis.set_ipts_number(self.model.experimentinfo.ipts_number)
+            self.dataanalysis_bind.update_in_view(self.model.dataanalysis)
+
     def change_callback(self, results: Dict[str, Any]) -> None:
         if results["error"]:
             print(f"error in fields {results['errored']}, model not changed")
